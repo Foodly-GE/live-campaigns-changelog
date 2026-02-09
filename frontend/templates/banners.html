@@ -1,0 +1,429 @@
+{% extends "base.html" %}
+
+{% block title %}Banner Actions - Campaign Tracker{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Banner Actions</h1>
+    <p class="text-secondary">Tracking banner requests — grouped by action</p>
+</div>
+
+<!-- Filters -->
+<div class="filters-section">
+    <div class="filter-group">
+        <label for="account-manager-filter">Account Manager</label>
+        <select id="account-manager-filter">
+            <option value="">All managers</option>
+        </select>
+    </div>
+    <div class="filter-group">
+        <label for="spend-objective-filter">Spend Objective</label>
+        <select id="spend-objective-filter">
+            <option value="">All objectives</option>
+        </select>
+    </div>
+    <div class="filter-group">
+        <label for="bonus-type-filter">Bonus Type</label>
+        <select id="bonus-type-filter">
+            <option value="">All types</option>
+        </select>
+    </div>
+    <div class="filter-group">
+        <label>Provider Name</label>
+        <div class="multiselect-wrapper" id="provider-multiselect">
+            <button type="button" class="multiselect-toggle">All providers</button>
+            <div class="multiselect-dropdown"></div>
+        </div>
+    </div>
+    <div class="filter-group">
+        <label for="city-filter">City</label>
+        <select id="city-filter">
+            <option value="">All cities</option>
+        </select>
+    </div>
+    <div class="filter-group">
+        <label for="date-filter">Date</label>
+        <select id="date-filter">
+            <option value="">Latest</option>
+        </select>
+    </div>
+</div>
+
+<!-- Stats -->
+<section class="progression-section">
+    <h2 class="section-title">Summary</h2>
+    <div class="stats-grid">
+        <div class="stat-card green">
+            <div class="stat-value" id="stat-start">0</div>
+            <div class="stat-label">Banner Start</div>
+        </div>
+        <div class="stat-card cyan">
+            <div class="stat-value" id="stat-update">0</div>
+            <div class="stat-label">Banner Update</div>
+        </div>
+        <div class="stat-card pink">
+            <div class="stat-value" id="stat-end">0</div>
+            <div class="stat-label">Banner End</div>
+        </div>
+    </div>
+</section>
+
+<!-- Details Section -->
+<section class="details-section">
+    <h2 class="section-title">Details</h2>
+
+    <!-- Banner Start -->
+    <div class="detail-group">
+        <div class="detail-group-header" onclick="toggleGroup(this)">
+            <span class="group-indicator green"></span>
+            <span class="group-title">Banner Start</span>
+            <span class="group-count" id="count-start">0</span>
+        </div>
+        <div class="detail-group-content">
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Provider ID</th>
+                            <th>Provider Name</th>
+                            <th>Account Manager</th>
+                            <th>City</th>
+                            <th>Spend Objective</th>
+                            <th>Bonus Type</th>
+                            <th>Bonus %</th>
+                            <th>Campaign Start</th>
+                            <th>Campaign End</th>
+                            <th>Bonus Max Value</th>
+                            <th>Min Basket Size</th>
+                            <th>Campaign ID</th>
+                            <th>Diff (changes)</th>
+                            <th>Hash ID</th>
+                            <th>Banner Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-start">
+                        <tr>
+                            <td colspan="15" class="empty-state">No data</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Banner Update -->
+    <div class="detail-group">
+        <div class="detail-group-header" onclick="toggleGroup(this)">
+            <span class="group-indicator cyan"></span>
+            <span class="group-title">Banner Update</span>
+            <span class="group-count" id="count-update">0</span>
+        </div>
+        <div class="detail-group-content">
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Provider ID</th>
+                            <th>Provider Name</th>
+                            <th>Account Manager</th>
+                            <th>City</th>
+                            <th>Spend Objective</th>
+                            <th>Bonus Type</th>
+                            <th>Bonus %</th>
+                            <th>Campaign Start</th>
+                            <th>Campaign End</th>
+                            <th>Bonus Max Value</th>
+                            <th>Min Basket Size</th>
+                            <th>Campaign ID</th>
+                            <th>Diff (changes)</th>
+                            <th>Hash ID</th>
+                            <th>Banner Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-update">
+                        <tr>
+                            <td colspan="15" class="empty-state">No data</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Banner End -->
+    <div class="detail-group">
+        <div class="detail-group-header" onclick="toggleGroup(this)">
+            <span class="group-indicator pink"></span>
+            <span class="group-title">Banner End</span>
+            <span class="group-count" id="count-end">0</span>
+        </div>
+        <div class="detail-group-content">
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Provider ID</th>
+                            <th>Provider Name</th>
+                            <th>Account Manager</th>
+                            <th>City</th>
+                            <th>Spend Objective</th>
+                            <th>Bonus Type</th>
+                            <th>Bonus %</th>
+                            <th>Campaign Start</th>
+                            <th>Campaign End</th>
+                            <th>Bonus Max Value</th>
+                            <th>Min Basket Size</th>
+                            <th>Campaign ID</th>
+                            <th>Diff (changes)</th>
+                            <th>Hash ID</th>
+                            <th>Banner Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-end">
+                        <tr>
+                            <td colspan="15" class="empty-state">No data</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const BONUS_TYPE_ORDER = [
+        'percentage_of_food_price',
+        'percentage_of_full_delivery_price'
+    ];
+
+    let allData = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadBannersData();
+        initCellExpand();
+        initMultiSelect('provider-multiselect', applyFiltersAndSort);
+
+        document.getElementById('date-filter').addEventListener('change', loadBannersData);
+        document.getElementById('account-manager-filter').addEventListener('change', applyFiltersAndSort);
+        document.getElementById('bonus-type-filter').addEventListener('change', applyFiltersAndSort);
+        document.getElementById('spend-objective-filter').addEventListener('change', applyFiltersAndSort);
+        document.getElementById('city-filter').addEventListener('change', applyFiltersAndSort);
+    });
+
+    async function loadBannersData() {
+        const dateFilter = document.getElementById('date-filter').value;
+
+        let url = '/api/banners';
+        if (dateFilter) url += `?date=${dateFilter}`;
+
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+            allData = data;
+
+            // Populate date filter
+            const dateSelect = document.getElementById('date-filter');
+            if (dateSelect.options.length <= 1 && data.dates) {
+                data.dates.forEach(d => {
+                    const option = document.createElement('option');
+                    option.value = d;
+                    option.textContent = d;
+                    dateSelect.appendChild(option);
+                });
+            }
+
+            updateStats(data.summary);
+            populateFilters(data.grouped);
+            applyFiltersAndSort();
+        } catch (error) {
+            console.error('Error loading banners:', error);
+        }
+    }
+
+    function populateFilters(grouped) {
+        if (!grouped) return;
+
+        const allEntries = [
+            ...(grouped['banner-start'] || []),
+            ...(grouped['banner-update'] || []),
+            ...(grouped['banner-end'] || [])
+        ];
+
+        const managers = [...new Set(allEntries.map(e => e.account_manager).filter(Boolean))].sort();
+        const managerSelect = document.getElementById('account-manager-filter');
+        const currentManager = managerSelect.value;
+        managerSelect.innerHTML = '<option value="">All managers</option>';
+        managers.forEach(m => {
+            const option = document.createElement('option');
+            option.value = m;
+            option.textContent = m;
+            managerSelect.appendChild(option);
+        });
+        managerSelect.value = currentManager;
+
+        const bonusTypes = [...new Set(allEntries.map(e => e.bonus_type).filter(Boolean))].sort();
+        const bonusTypeSelect = document.getElementById('bonus-type-filter');
+        const currentBT = bonusTypeSelect.value;
+        bonusTypeSelect.innerHTML = '<option value="">All types</option>';
+        bonusTypes.forEach(t => {
+            const option = document.createElement('option');
+            option.value = t;
+            option.textContent = t;
+            bonusTypeSelect.appendChild(option);
+        });
+        bonusTypeSelect.value = currentBT;
+
+        const objectives = [...new Set(allEntries.map(e => e.spend_objective).filter(Boolean))].sort();
+        const objectiveSelect = document.getElementById('spend-objective-filter');
+        const currentObj = objectiveSelect.value;
+        objectiveSelect.innerHTML = '<option value="">All objectives</option>';
+        objectives.forEach(o => {
+            const option = document.createElement('option');
+            option.value = o;
+            option.textContent = o;
+            objectiveSelect.appendChild(option);
+        });
+        objectiveSelect.value = currentObj;
+
+        // Provider multi-select
+        const providers = [...new Set(allEntries.map(e => e.provider_name).filter(Boolean))].sort();
+        populateMultiSelect('provider-multiselect', providers);
+
+        // City filter
+        const cities = [...new Set(allEntries.map(e => e.city).filter(Boolean))].sort();
+        const citySelect = document.getElementById('city-filter');
+        const currentCity = citySelect.value;
+        citySelect.innerHTML = '<option value="">All cities</option>';
+        cities.forEach(c => {
+            const option = document.createElement('option');
+            option.value = c;
+            option.textContent = c;
+            citySelect.appendChild(option);
+        });
+        citySelect.value = currentCity;
+    }
+
+    function applyFiltersAndSort() {
+        if (!allData) return;
+
+        const selectedProviders = getMultiSelectValues('provider-multiselect');
+        const managerFilter = document.getElementById('account-manager-filter').value;
+        const bonusTypeFilter = document.getElementById('bonus-type-filter').value;
+        const objectiveFilter = document.getElementById('spend-objective-filter').value;
+        const cityFilter = document.getElementById('city-filter').value;
+
+        const filterFn = (entry) => {
+            if (selectedProviders.length > 0 && !selectedProviders.includes(entry.provider_name)) return false;
+            if (managerFilter && entry.account_manager !== managerFilter) return false;
+            if (bonusTypeFilter && entry.bonus_type !== bonusTypeFilter) return false;
+            if (objectiveFilter && entry.spend_objective !== objectiveFilter) return false;
+            if (cityFilter && entry.city !== cityFilter) return false;
+            return true;
+        };
+
+        const filtered = {
+            'banner-start': sortEntries((allData.grouped['banner-start'] || []).filter(filterFn)),
+            'banner-update': sortEntries((allData.grouped['banner-update'] || []).filter(filterFn)),
+            'banner-end': sortEntries((allData.grouped['banner-end'] || []).filter(filterFn))
+        };
+
+        updateTables(filtered);
+    }
+
+    function sortEntries(entries) {
+        if (!entries || entries.length === 0) return entries;
+
+        return [...entries].sort((a, b) => {
+            const typeA = a.bonus_type || '';
+            const typeB = b.bonus_type || '';
+            const idxA = BONUS_TYPE_ORDER.indexOf(typeA);
+            const idxB = BONUS_TYPE_ORDER.indexOf(typeB);
+
+            if (idxA !== -1 && idxB !== -1) {
+                if (idxA !== idxB) return idxA - idxB;
+            } else if (idxA !== -1) return -1;
+            else if (idxB !== -1) return 1;
+            else if (typeA !== typeB) return typeB.localeCompare(typeA);
+
+            const pctA = parseFloat(a.bonus_percentage) || 0;
+            const pctB = parseFloat(b.bonus_percentage) || 0;
+            if (pctA !== pctB) return pctB - pctA;
+
+            const objA = a.spend_objective || '';
+            const objB = b.spend_objective || '';
+            if (objA !== objB) return objA.localeCompare(objB);
+
+            const endA = new Date(a.campaign_end || 0);
+            const endB = new Date(b.campaign_end || 0);
+            return endA - endB;
+        });
+    }
+
+    function updateStats(summary) {
+        if (!summary) return;
+        document.getElementById('stat-start').textContent = summary.start || 0;
+        document.getElementById('stat-update').textContent = summary.update || 0;
+        document.getElementById('stat-end').textContent = summary.end || 0;
+    }
+
+    function updateTables(grouped) {
+        const groups = [
+            { key: 'banner-start', tableId: 'table-start', countId: 'count-start' },
+            { key: 'banner-update', tableId: 'table-update', countId: 'count-update' },
+            { key: 'banner-end', tableId: 'table-end', countId: 'count-end' }
+        ];
+
+        groups.forEach(({ key, tableId, countId }) => {
+            const entries = grouped[key] || [];
+            const tbody = document.getElementById(tableId);
+            document.getElementById(countId).textContent = entries.length;
+
+            if (entries.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="15" class="empty-state">No data</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = entries.map(entry => `
+                <tr>
+                    <td>${entry.provider_id || '-'}</td>
+                    <td>${entry.provider_name || '-'}</td>
+                    <td>${entry.account_manager || '-'}</td>
+                    <td>${entry.city || '-'}</td>
+                    <td><span class="objective-badge">${entry.spend_objective || '-'}</span></td>
+                    <td><span class="bonus-type-badge">${entry.bonus_type || '-'}</span></td>
+                    <td>${entry.bonus_percentage || '-'}%</td>
+                    <td>${formatDate(entry.campaign_start)}</td>
+                    <td>${formatDate(entry.campaign_end)}</td>
+                    <td>${entry.bonus_max_value || '-'}</td>
+                    <td>${entry.min_basket_size || '-'}</td>
+                    <td>${entry.campaign_id || '-'}</td>
+                    <td class="diff-cell">${formatDiff(entry.changed_fields, entry.previous_values)}</td>
+                    <td><code>${entry.campaign_hash || '-'}</code></td>
+                    <td>${getBannerBadge(entry.banner_action)}</td>
+                </tr>
+            `).join('');
+        });
+    }
+
+    function formatDiff(fields, prevValues) {
+        if (!fields || fields.length === 0) return '<span class="text-muted">—</span>';
+
+        return fields.map(f => {
+            const prev = prevValues && prevValues[f] != null ? prevValues[f] : 'null';
+            return `<div class="diff-item">
+                <span class="diff-key">${f}:</span>
+                <span class="diff-prev">${prev}</span>
+                <span class="diff-arrow">→</span>
+            </div>`;
+        }).join('');
+    }
+
+    function getBannerBadge(action) {
+        if (!action) return '-';
+        const type = action.replace('banner-', '');
+        return `<span class="badge ${type}">${type}</span>`;
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,548 @@
+{% extends "base.html" %}
+
+{% block title %}Changelog - Campaign Tracker{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Changelog</h1>
+    <p class="text-secondary">Showing activity for the last 2 weeks</p>
+</div>
+
+<!-- Global Filters -->
+<div class="filters-section">
+    <div class="filter-group">
+        <label for="account-manager-filter">Account Manager</label>
+        <select id="account-manager-filter">
+            <option value="">All managers</option>
+        </select>
+    </div>
+    <div class="filter-group">
+        <label for="spend-objective-filter">Spend Objective</label>
+        <select id="spend-objective-filter">
+            <option value="">All objectives</option>
+        </select>
+    </div>
+    <div class="filter-group">
+        <label for="bonus-type-filter">Bonus Type</label>
+        <select id="bonus-type-filter">
+            <option value="">All types</option>
+        </select>
+    </div>
+    <div class="filter-group">
+        <label>Provider Name</label>
+        <div class="multiselect-wrapper" id="provider-multiselect">
+            <button type="button" class="multiselect-toggle">All providers</button>
+            <div class="multiselect-dropdown"></div>
+        </div>
+    </div>
+    <div class="filter-group">
+        <label for="city-filter">City</label>
+        <select id="city-filter">
+            <option value="">All cities</option>
+        </select>
+    </div>
+</div>
+
+<!-- Progression Section -->
+<section class="progression-section">
+    <h2 class="section-title">Progression</h2>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+        <div class="stat-card green">
+            <div class="stat-value" id="stat-start">0</div>
+            <div class="stat-label">Campaign Start</div>
+            <div class="stat-change" id="wow-start">
+                <span>--</span>
+            </div>
+        </div>
+        <div class="stat-card cyan">
+            <div class="stat-value" id="stat-update">0</div>
+            <div class="stat-label">Campaign Update</div>
+            <div class="stat-change" id="wow-update">
+                <span>--</span>
+            </div>
+        </div>
+        <div class="stat-card pink">
+            <div class="stat-value" id="stat-end">0</div>
+            <div class="stat-label">Campaign End</div>
+            <div class="stat-change" id="wow-end">
+                <span>--</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="chart-section">
+        <div class="chart-container">
+            <canvas id="changelog-chart"></canvas>
+        </div>
+    </div>
+</section>
+
+<!-- Details Section -->
+<section class="details-section">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h2 class="section-title" style="margin-bottom: 0;">Details</h2>
+
+        <!-- Detail-specific Date Filter -->
+        <div class="filter-group" style="margin-left: auto;">
+            <label for="detail-date-filter">Showing results from:</label>
+            <select id="detail-date-filter" style="min-width: 140px;">
+                {% for date in dates %}
+                <option value="{{ date }}">{{ date }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <!-- Campaign Start -->
+    <div class="detail-group">
+        <div class="detail-group-header" onclick="toggleGroup(this)">
+            <span class="group-indicator green"></span>
+            <span class="group-title">Campaign Start</span>
+            <span class="group-count" id="count-start">0</span>
+        </div>
+        <div class="detail-group-content">
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Provider ID</th>
+                            <th>Provider Name</th>
+                            <th>Account Manager</th>
+                            <th>City</th>
+                            <th>Spend Objective</th>
+                            <th>Bonus Type</th>
+                            <th>Bonus %</th>
+                            <th>Campaign Start</th>
+                            <th>Campaign End</th>
+                            <th>Bonus Max Value</th>
+                            <th>Min Basket Size</th>
+                            <th>Campaign ID</th>
+                            <th>Diff (changes)</th>
+                            <th>Hash ID</th>
+                            <th>Banner Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-start">
+                        <tr>
+                            <td colspan="15" class="empty-state">No data</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Campaign Update -->
+    <div class="detail-group">
+        <div class="detail-group-header" onclick="toggleGroup(this)">
+            <span class="group-indicator cyan"></span>
+            <span class="group-title">Campaign Update</span>
+            <span class="group-count" id="count-update">0</span>
+        </div>
+        <div class="detail-group-content">
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Provider ID</th>
+                            <th>Provider Name</th>
+                            <th>Account Manager</th>
+                            <th>City</th>
+                            <th>Spend Objective</th>
+                            <th>Bonus Type</th>
+                            <th>Bonus %</th>
+                            <th>Campaign Start</th>
+                            <th>Campaign End</th>
+                            <th>Bonus Max Value</th>
+                            <th>Min Basket Size</th>
+                            <th>Campaign ID</th>
+                            <th>Diff (changes)</th>
+                            <th>Hash ID</th>
+                            <th>Banner Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-update">
+                        <tr>
+                            <td colspan="15" class="empty-state">No data</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Campaign End -->
+    <div class="detail-group">
+        <div class="detail-group-header" onclick="toggleGroup(this)">
+            <span class="group-indicator pink"></span>
+            <span class="group-title">Campaign End</span>
+            <span class="group-count" id="count-end">0</span>
+        </div>
+        <div class="detail-group-content">
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Provider ID</th>
+                            <th>Provider Name</th>
+                            <th>Account Manager</th>
+                            <th>City</th>
+                            <th>Spend Objective</th>
+                            <th>Bonus Type</th>
+                            <th>Bonus %</th>
+                            <th>Campaign Start</th>
+                            <th>Campaign End</th>
+                            <th>Bonus Max Value</th>
+                            <th>Min Basket Size</th>
+                            <th>Campaign ID</th>
+                            <th>Diff (changes)</th>
+                            <th>Hash ID</th>
+                            <th>Banner Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-end">
+                        <tr>
+                            <td colspan="15" class="empty-state">No data</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const BONUS_TYPE_ORDER = [
+        'percentage_of_food_price',
+        'percentage_of_full_delivery_price'
+    ];
+
+    let allData = null;
+    let changelogChart = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadChangelogData();
+        initCellExpand();
+        initMultiSelect('provider-multiselect', applyFiltersAndSort);
+
+        document.getElementById('detail-date-filter').addEventListener('change', loadChangelogData);
+        document.getElementById('account-manager-filter').addEventListener('change', applyFiltersAndSort);
+        document.getElementById('bonus-type-filter').addEventListener('change', applyFiltersAndSort);
+        document.getElementById('spend-objective-filter').addEventListener('change', applyFiltersAndSort);
+        document.getElementById('city-filter').addEventListener('change', applyFiltersAndSort);
+    });
+
+    async function loadChangelogData() {
+        const dateFilter = document.getElementById('detail-date-filter').value;
+
+        if (!allData) {
+            document.getElementById('table-start').innerHTML = '<tr><td colspan="15" class="loading">Loading...</td></tr>';
+        }
+
+        let url = '/api/changelog';
+        if (dateFilter) url += `?date=${dateFilter}`;
+
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+            allData = data;
+
+            if (data.detail_date && !dateFilter) {
+                document.getElementById('detail-date-filter').value = data.detail_date;
+            }
+
+            updateStats(data.summary);
+            updateChart(data.time_series);
+            populateFilters(data.grouped);
+            applyFiltersAndSort();
+        } catch (error) {
+            console.error('Error loading changelog:', error);
+        }
+    }
+
+    function populateFilters(grouped) {
+        if (!grouped) return;
+
+        const allEntries = [
+            ...(grouped['campaign-start'] || []),
+            ...(grouped['campaign-end'] || []),
+            ...(grouped['campaign-update'] || [])
+        ];
+
+        const managers = [...new Set(allEntries.map(e => e.account_manager).filter(Boolean))].sort();
+        const managerSelect = document.getElementById('account-manager-filter');
+        const currentManager = managerSelect.value;
+        managerSelect.innerHTML = '<option value="">All managers</option>';
+        managers.forEach(m => {
+            const option = document.createElement('option');
+            option.value = m;
+            option.textContent = m;
+            managerSelect.appendChild(option);
+        });
+        managerSelect.value = currentManager;
+
+        const bonusTypes = [...new Set(allEntries.map(e => e.bonus_type).filter(Boolean))].sort();
+        const bonusTypeSelect = document.getElementById('bonus-type-filter');
+        const currentBT = bonusTypeSelect.value;
+        bonusTypeSelect.innerHTML = '<option value="">All types</option>';
+        bonusTypes.forEach(t => {
+            const option = document.createElement('option');
+            option.value = t;
+            option.textContent = t;
+            bonusTypeSelect.appendChild(option);
+        });
+        bonusTypeSelect.value = currentBT;
+
+        const objectives = [...new Set(allEntries.map(e => e.spend_objective).filter(Boolean))].sort();
+        const objectiveSelect = document.getElementById('spend-objective-filter');
+        const currentObj = objectiveSelect.value;
+        objectiveSelect.innerHTML = '<option value="">All objectives</option>';
+        objectives.forEach(o => {
+            const option = document.createElement('option');
+            option.value = o;
+            option.textContent = o;
+            objectiveSelect.appendChild(option);
+        });
+        objectiveSelect.value = currentObj;
+
+        // Provider multi-select
+        const providers = [...new Set(allEntries.map(e => e.provider_name).filter(Boolean))].sort();
+        populateMultiSelect('provider-multiselect', providers);
+
+        // City filter
+        const cities = [...new Set(allEntries.map(e => e.city).filter(Boolean))].sort();
+        const citySelect = document.getElementById('city-filter');
+        const currentCity = citySelect.value;
+        citySelect.innerHTML = '<option value="">All cities</option>';
+        cities.forEach(c => {
+            const option = document.createElement('option');
+            option.value = c;
+            option.textContent = c;
+            citySelect.appendChild(option);
+        });
+        citySelect.value = currentCity;
+    }
+
+    function applyFiltersAndSort() {
+        if (!allData) return;
+
+        const selectedProviders = getMultiSelectValues('provider-multiselect');
+        const managerFilter = document.getElementById('account-manager-filter').value;
+        const bonusTypeFilter = document.getElementById('bonus-type-filter').value;
+        const objectiveFilter = document.getElementById('spend-objective-filter').value;
+        const cityFilter = document.getElementById('city-filter').value;
+
+        const filterFn = (entry) => {
+            if (selectedProviders.length > 0 && !selectedProviders.includes(entry.provider_name)) return false;
+            if (managerFilter && entry.account_manager !== managerFilter) return false;
+            if (bonusTypeFilter && entry.bonus_type !== bonusTypeFilter) return false;
+            if (objectiveFilter && entry.spend_objective !== objectiveFilter) return false;
+            if (cityFilter && entry.city !== cityFilter) return false;
+            return true;
+        };
+
+        const filtered = {
+            'campaign-start': (allData.grouped['campaign-start'] || []).filter(filterFn),
+            'campaign-end': (allData.grouped['campaign-end'] || []).filter(filterFn),
+            'campaign-update': (allData.grouped['campaign-update'] || []).filter(filterFn)
+        };
+
+        const sorted = {
+            'campaign-start': sortEntries(filtered['campaign-start']),
+            'campaign-end': sortEntries(filtered['campaign-end']),
+            'campaign-update': sortEntries(filtered['campaign-update'])
+        };
+
+        updateTables(sorted);
+    }
+
+    function sortEntries(entries) {
+        if (!entries || entries.length === 0) return entries;
+
+        return [...entries].sort((a, b) => {
+            const typeA = a.bonus_type || '';
+            const typeB = b.bonus_type || '';
+            const idxA = BONUS_TYPE_ORDER.indexOf(typeA);
+            const idxB = BONUS_TYPE_ORDER.indexOf(typeB);
+
+            if (idxA !== -1 && idxB !== -1) {
+                if (idxA !== idxB) return idxA - idxB;
+            } else if (idxA !== -1) return -1;
+            else if (idxB !== -1) return 1;
+            else if (typeA !== typeB) return typeB.localeCompare(typeA);
+
+            const pctA = parseFloat(a.bonus_percentage) || 0;
+            const pctB = parseFloat(b.bonus_percentage) || 0;
+            if (pctA !== pctB) return pctB - pctA;
+
+            const objA = a.spend_objective || '';
+            const objB = b.spend_objective || '';
+            if (objA !== objB) return objA.localeCompare(objB);
+
+            const endA = new Date(a.campaign_end || 0);
+            const endB = new Date(b.campaign_end || 0);
+            return endA - endB;
+        });
+    }
+
+    function updateStats(summary) {
+        if (!summary) return;
+
+        const stats = summary.stats;
+        const prev = summary.prev_stats;
+
+        updateStatCard('start', stats['campaign-start'], prev['campaign-start']);
+        updateStatCard('update', stats['campaign-update'], prev['campaign-update']);
+        updateStatCard('end', stats['campaign-end'], prev['campaign-end']);
+    }
+
+    function updateStatCard(idSuffix, current, previous) {
+        const valueEl = document.getElementById(`stat-${idSuffix}`);
+        const wowEl = document.getElementById(`wow-${idSuffix}`);
+
+        valueEl.textContent = current;
+
+        const diff = current - previous;
+        const diffText = diff > 0 ? `+${diff}` : `${diff}`;
+        const arrow = diff > 0 ? '↑' : (diff < 0 ? '↓' : '');
+        const colorClass = diff > 0 ? 'up' : (diff < 0 ? 'down' : '');
+
+        wowEl.innerHTML = `<span class="${colorClass}">${arrow} ${diffText} vs prev day</span>`;
+        if (diff === 0) wowEl.innerHTML = '<span class="text-muted">— vs prev day</span>';
+    }
+
+    function updateChart(timeSeries) {
+        if (!timeSeries || Object.keys(timeSeries).length === 0) {
+            console.warn('No time series data for chart');
+            return;
+        }
+
+        const ctx = document.getElementById('changelog-chart').getContext('2d');
+
+        const labels = Object.keys(timeSeries).sort();
+        const startData = labels.map(d => timeSeries[d]['campaign-start'] || 0);
+        const updateData = labels.map(d => timeSeries[d]['campaign-update'] || 0);
+        const endData = labels.map(d => timeSeries[d]['campaign-end'] || 0);
+
+        if (changelogChart) {
+            changelogChart.destroy();
+        }
+
+        const formattedLabels = labels.map(d => {
+            const dt = new Date(d + 'T00:00:00');
+            return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        });
+
+        changelogChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: formattedLabels,
+                datasets: [
+                    {
+                        label: 'Campaign Start',
+                        data: startData,
+                        borderColor: '#34d399',
+                        backgroundColor: 'transparent',
+                        tension: 0.35,
+                        fill: false,
+                        borderWidth: 2,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#34d399',
+                        pointHoverRadius: 6
+                    },
+                    {
+                        label: 'Campaign Update',
+                        data: updateData,
+                        borderColor: '#22d3ee',
+                        backgroundColor: 'transparent',
+                        tension: 0.35,
+                        fill: false,
+                        borderWidth: 2,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#22d3ee',
+                        pointHoverRadius: 6
+                    },
+                    {
+                        label: 'Campaign End',
+                        data: endData,
+                        borderColor: '#fb7185',
+                        backgroundColor: 'transparent',
+                        tension: 0.35,
+                        fill: false,
+                        borderWidth: 2,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#fb7185',
+                        pointHoverRadius: 6
+                    }
+                ]
+            },
+            options: window.darkChartOptions
+        });
+    }
+
+    function updateTables(grouped) {
+        const tables = {
+            'table-start': grouped['campaign-start'] || [],
+            'table-update': grouped['campaign-update'] || [],
+            'table-end': grouped['campaign-end'] || []
+        };
+
+        for (const [tableId, entries] of Object.entries(tables)) {
+            const tbody = document.getElementById(tableId);
+
+            if (entries.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="15" class="empty-state">No data</td></tr>';
+                continue;
+            }
+
+            tbody.innerHTML = entries.map(entry => `
+                <tr>
+                    <td>${entry.provider_id || '-'}</td>
+                    <td>${entry.provider_name || '-'}</td>
+                    <td>${entry.account_manager || '-'}</td>
+                    <td>${entry.city || '-'}</td>
+                    <td><span class="objective-badge">${entry.spend_objective || '-'}</span></td>
+                    <td><span class="bonus-type-badge">${entry.bonus_type || '-'}</span></td>
+                    <td>${entry.bonus_percentage || '-'}%</td>
+                    <td>${formatDate(entry.campaign_start)}</td>
+                    <td>${formatDate(entry.campaign_end)}</td>
+                    <td>${entry.bonus_max_value || '-'}</td>
+                    <td>${entry.min_basket_size || '-'}</td>
+                    <td>${entry.campaign_id || '-'}</td>
+                    <td class="diff-cell">${formatDiff(entry.changed_fields, entry.previous_values)}</td>
+                    <td><code>${entry.campaign_hash || '-'}</code></td>
+                    <td>${getBannerBadge(entry.banner_action)}</td>
+                </tr>
+            `).join('');
+        }
+
+        document.getElementById('count-start').textContent = (grouped['campaign-start'] || []).length;
+        document.getElementById('count-update').textContent = (grouped['campaign-update'] || []).length;
+        document.getElementById('count-end').textContent = (grouped['campaign-end'] || []).length;
+    }
+
+    function formatDiff(fields, prevValues) {
+        if (!fields || fields.length === 0) return '<span class="text-muted">—</span>';
+
+        return fields.map(f => {
+            const prev = prevValues && prevValues[f] != null ? prevValues[f] : 'null';
+            return `<div class="diff-item">
+                <span class="diff-key">${f}:</span>
+                <span class="diff-prev">${prev}</span>
+                <span class="diff-arrow">→</span>
+            </div>`;
+        }).join('');
+    }
+
+    function getBannerBadge(action) {
+        if (!action) return '-';
+        const type = action.replace('banner-', '');
+        return `<span class="badge ${type}">${type}</span>`;
+    }
+</script>
+{% endblock %}
