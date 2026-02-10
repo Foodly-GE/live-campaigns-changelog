@@ -88,4 +88,34 @@ class GCSStorage:
         content = latest.download_as_bytes()
         
         return filename, content
+    
+    def cleanup_old_snapshots(self, keep_count: int = 10) -> int:
+        """
+        Delete old snapshots, keeping only the most recent ones.
+        
+        Args:
+            keep_count: Number of most recent snapshots to keep
+            
+        Returns:
+            Number of snapshots deleted
+        """
+        blobs = list(self.bucket.list_blobs(prefix='snapshots/'))
+        csv_blobs = [b for b in blobs if b.name.endswith('.csv')]
+        
+        if len(csv_blobs) <= keep_count:
+            return 0
+        
+        # Sort by updated time, most recent first
+        csv_blobs.sort(key=lambda b: b.updated, reverse=True)
+        
+        # Delete old ones
+        to_delete = csv_blobs[keep_count:]
+        deleted_count = 0
+        
+        for blob in to_delete:
+            blob.delete()
+            deleted_count += 1
+            print(f"Deleted old snapshot: {blob.name}")
+        
+        return deleted_count
 

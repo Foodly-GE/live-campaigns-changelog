@@ -357,7 +357,12 @@ def api_sync():
         # 9. Save the current snapshot to GCS for calendar endpoint
         storage.save_snapshot(current['drive_file']['name'], current['content'])
         
-        # 10. Update master state in GCS
+        # 10. Cleanup old snapshots (keep only 10 most recent)
+        deleted_count = storage.cleanup_old_snapshots(keep_count=10)
+        if deleted_count > 0:
+            print(f"Cleaned up {deleted_count} old snapshot(s) from GCS")
+        
+        # 11. Update master state in GCS
         state = storage.load_master_state()
         state['last_processed'] = datetime.now().isoformat()
         state['last_current_file'] = current['drive_file']['name']
