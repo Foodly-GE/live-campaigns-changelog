@@ -18,34 +18,20 @@ interface DataTableProps {
     emptyMessage?: string
 }
 
-// Color palette for categorical field chips - deterministic based on value
-const chipColors = [
-    "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
-    "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300",
-    "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-    "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-    "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
-    "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300",
-    "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300",
-    "bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300",
-]
-
-// Hash function for consistent color assignment
-function hashString(str: string): number {
-    let hash = 0
-    for (let i = 0; i < str.length; i++) {
-        const char = str.charCodeAt(i)
-        hash = ((hash << 5) - hash) + char
-        hash = hash & hash
-    }
-    return Math.abs(hash)
-}
 
 function getChipColor(value: string, fieldType: 'objective' | 'bonus' | 'city' | 'manager'): string {
     if (!value) return "bg-muted text-muted-foreground"
-    // Use field type + value for unique but consistent coloring
-    const hash = hashString(`${fieldType}:${value}`)
-    return chipColors[hash % chipColors.length]
+
+    switch (fieldType) {
+        case 'objective':
+            // Use Indigo/Blue for objectives
+            return "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800"
+        case 'bonus':
+            // Keep Violet for bonus types
+            return "bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300 border-violet-200 dark:border-violet-800"
+        default:
+            return "bg-slate-100 text-slate-100 dark:bg-slate-800 dark:text-slate-300"
+    }
 }
 
 function ExpandableCell({ children, className }: { children: React.ReactNode, className?: string }) {
@@ -83,9 +69,9 @@ function getBannerBadge(action: string | undefined) {
 
     let className = "whitespace-nowrap text-xs font-medium border-0 "
 
-    if (action.includes('start')) className += "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300"
-    else if (action.includes('end')) className += "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
-    else if (action.includes('update')) className += "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300"
+    if (action.includes('start')) className += "bg-[#10b981]/15 text-[#047857] dark:bg-[#10b981]/25 dark:text-[#a7f3d0]"
+    else if (action.includes('end')) className += "bg-[#a3a3a3]/15 text-[#525252] dark:bg-[#a3a3a3]/25 dark:text-[#e5e5e5]"
+    else if (action.includes('update')) className += "bg-[#e0e7ff] text-[#4338ca] dark:bg-[#312e81]/50 dark:text-[#c7d2fe]" // Indigo 100/700 and 900/200
     else className += "bg-muted text-muted-foreground"
 
     return <Badge variant="outline" className={className}>{action}</Badge>
@@ -153,12 +139,18 @@ export function DataTable({ data, emptyMessage = "No data available" }: DataTabl
     const sortedData = useMemo(() => {
         if (!data) return []
         return [...data].sort((a, b) => {
-            // 1. bonus % descending
+            // 1. provider_name ascending
+            const nameA = a.provider_name || ""
+            const nameB = b.provider_name || ""
+            const nameCompare = nameA.localeCompare(nameB)
+            if (nameCompare !== 0) return nameCompare
+
+            // 2. bonus % descending
             const bonusA = a.bonus_percentage || 0
             const bonusB = b.bonus_percentage || 0
             if (bonusB !== bonusA) return bonusB - bonusA
 
-            // 2. campaign end ascending
+            // 3. campaign end ascending
             const endA = a.campaign_end || ""
             const endB = b.campaign_end || ""
             return endA.localeCompare(endB)

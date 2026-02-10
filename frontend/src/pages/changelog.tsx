@@ -229,19 +229,19 @@ export default function ChangelogPage() {
                         label="Campaign Start"
                         value={filteredStats.current.start}
                         previous={filteredStats.previous.start}
-                        color="violet"
+                        variant="start"
                     />
                     <StatCard
                         label="Campaign Update"
                         value={filteredStats.current.update}
                         previous={filteredStats.previous.update}
-                        color="sky"
+                        variant="update"
                     />
                     <StatCard
                         label="Campaign End"
                         value={filteredStats.current.end}
                         previous={filteredStats.previous.end}
-                        color="amber"
+                        variant="end"
                     />
                 </div>
 
@@ -249,9 +249,9 @@ export default function ChangelogPage() {
                     <CustomLineChart
                         data={chartData}
                         traces={[
-                            { key: 'start', color: 'hsl(263 70% 50%)', label: 'Start' },
-                            { key: 'update', color: 'hsl(199 89% 48%)', label: 'Update' },
-                            { key: 'end', color: 'hsl(38 92% 50%)', label: 'End' }
+                            { key: 'start', color: '#10b981', label: 'Start' },
+                            { key: 'update', color: '#6366f1', label: 'Update' },
+                            { key: 'end', color: '#a3a3a3', label: 'End' }
                         ]}
                         height={320}
                     />
@@ -279,15 +279,15 @@ export default function ChangelogPage() {
                     </div>
                 </div>
 
-                <DetailGroup title="Campaign Start" count={filteredGroups.start.length} color="violet">
+                <DetailGroup title="Campaign Start" count={filteredGroups.start.length} variant="start">
                     <DataTable data={filteredGroups.start} emptyMessage="No campaigns started" />
                 </DetailGroup>
 
-                <DetailGroup title="Campaign Update" count={filteredGroups.update.length} color="sky">
+                <DetailGroup title="Campaign Update" count={filteredGroups.update.length} variant="update">
                     <DataTable data={filteredGroups.update} emptyMessage="No campaigns updated" />
                 </DetailGroup>
 
-                <DetailGroup title="Campaign End" count={filteredGroups.end.length} color="amber">
+                <DetailGroup title="Campaign End" count={filteredGroups.end.length} variant="end">
                     <DataTable data={filteredGroups.end} emptyMessage="No campaigns ended" />
                 </DetailGroup>
             </section>

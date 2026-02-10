@@ -186,19 +186,19 @@ export default function CalendarPage() {
                         label="Live"
                         value={filteredStats.live}
                         previous={data?.prev_summary?.[metric]?.live || 0}
-                        color="violet"
-                    />
-                    <StatCard
-                        label="Finished"
-                        value={filteredStats.finished}
-                        previous={data?.prev_summary?.[metric]?.finished || 0}
-                        color="amber"
+                        variant="start"
                     />
                     <StatCard
                         label="Scheduled"
                         value={filteredStats.scheduled}
                         previous={data?.prev_summary?.[metric]?.scheduled || 0}
-                        color="sky"
+                        variant="update"
+                    />
+                    <StatCard
+                        label="Finished"
+                        value={filteredStats.finished}
+                        previous={data?.prev_summary?.[metric]?.finished || 0}
+                        variant="end"
                     />
                 </div>
 
@@ -206,9 +206,9 @@ export default function CalendarPage() {
                     <CustomLineChart
                         data={chartData}
                         traces={[
-                            { key: 'live', color: 'hsl(263 70% 50%)', label: 'Live' },
-                            { key: 'finished', color: 'hsl(38 92% 50%)', label: 'Finished' },
-                            { key: 'scheduled', color: 'hsl(199 89% 48%)', label: 'Scheduled' }
+                            { key: 'live', color: '#10b981', label: 'Live' },
+                            { key: 'scheduled', color: '#6366f1', label: 'Scheduled' },
+                            { key: 'finished', color: '#a3a3a3', label: 'Finished' }
                         ]}
                         height={320}
                     />
@@ -218,16 +218,16 @@ export default function CalendarPage() {
             <section className="space-y-4">
                 <h2 className="text-xl font-semibold tracking-tight">Details</h2>
 
-                <DetailGroup title="Live" count={filteredGroups.live.length} color="violet">
+                <DetailGroup title="Live" count={filteredGroups.live.length} variant="start">
                     <DataTable data={filteredGroups.live} emptyMessage="No live campaigns" />
                 </DetailGroup>
 
-                <DetailGroup title="Finished" count={filteredGroups.finished.length} color="amber">
-                    <DataTable data={filteredGroups.finished} emptyMessage="No finished campaigns" />
+                <DetailGroup title="Scheduled" count={filteredGroups.scheduled.length} variant="update">
+                    <DataTable data={filteredGroups.scheduled} emptyMessage="No scheduled campaigns" />
                 </DetailGroup>
 
-                <DetailGroup title="Scheduled" count={filteredGroups.scheduled.length} color="sky">
-                    <DataTable data={filteredGroups.scheduled} emptyMessage="No scheduled campaigns" />
+                <DetailGroup title="Finished" count={filteredGroups.finished.length} variant="end">
+                    <DataTable data={filteredGroups.finished} emptyMessage="No finished campaigns" />
                 </DetailGroup>
             </section>
         </div>
