@@ -209,12 +209,13 @@ def api_calendar():
         filtered_df = filtered_df[filtered_df['status'] == status]
     
     # Get current summary
-    current_summary = get_calendar_summary(classified_df)  # Summary from all statuses
-    providers = get_unique_providers_by_status(classified_df)
+    current_campaigns = get_calendar_summary(classified_df)
+    current_providers = get_unique_providers_by_status(classified_df)
     
     # Get previous day summary for delta
     yesterday_df = classify_campaigns(base_filtered_df, today - timedelta(days=1))
-    prev_summary = get_calendar_summary(yesterday_df)
+    prev_campaigns = get_calendar_summary(yesterday_df)
+    prev_providers = get_unique_providers_by_status(yesterday_df)
     
     # Convert to records
     campaigns = filtered_df.to_dict('records')
@@ -227,9 +228,14 @@ def api_calendar():
             grouped[s].append(camp)
     
     return jsonify({
-        'summary': current_summary,
-        'prev_summary': prev_summary,
-        'providers': providers,
+        'summary': {
+            'campaigns': current_campaigns,
+            'providers': current_providers
+        },
+        'prev_summary': {
+            'campaigns': prev_campaigns,
+            'providers': prev_providers
+        },
         'grouped': grouped,
         'time_series': time_series,
         'filters': {

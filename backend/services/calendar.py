@@ -231,9 +231,9 @@ def get_time_series_data(
     df: pd.DataFrame,
     start_date: datetime,
     end_date: datetime
-) -> Dict[str, Dict[str, int]]:
+) -> Dict[str, Dict[str, Any]]:
     """
-    Calculate campaign status counts for each date in a range.
+    Calculate campaign status counts and unique provider counts for each date in a range.
     Reclassifies all campaigns against each date to get accurate snapshot totals.
     
     Args:
@@ -242,12 +242,15 @@ def get_time_series_data(
         end_date: End of date range
         
     Returns:
-        Dict of date -> {live: N, finished: N, scheduled: N}
+        Dict of date -> {
+            'campaigns': {live: N, finished: N, scheduled: N},
+            'providers': {live: N, finished: N, scheduled: N}
+        }
     """
     result = {}
     current = start_date
     
-    # Pre-calculate date objects for efficiency
+    # Pre-calculate data for efficiency
     campaigns = df.to_dict('records')
     for campaign in campaigns:
         # Convert strings to date objects if needed
@@ -271,11 +274,13 @@ def get_time_series_data(
         date_str = current.strftime('%Y-%m-%d')
         ref_date = current.date()
         
-        counts = {'live': 0, 'finished': 0, 'scheduled': 0}
+        campaign_counts = {'live': 0, 'finished': 0, 'scheduled': 0}
+        provider_ids = {'live': set(), 'finished': set(), 'scheduled': set()}
         
         for campaign in campaigns:
             start = campaign.get('start_dt')
             end = campaign.get('end_dt')
+            p_id = str(campaign.get('provider_id', ''))
             
             status = 'live'
             if start and start > ref_date:
@@ -283,9 +288,14 @@ def get_time_series_data(
             elif end and end < ref_date:
                 status = 'finished'
             
-            counts[status] += 1
+            campaign_counts[status] += 1
+            if p_id:
+                provider_ids[status].add(p_id)
             
-        result[date_str] = counts
+        result[date_str] = {
+            'campaigns': campaign_counts,
+            'providers': {s: len(ids) for s, ids in provider_ids.items()}
+        }
         current = current + pd.Timedelta(days=1)
         
     return result

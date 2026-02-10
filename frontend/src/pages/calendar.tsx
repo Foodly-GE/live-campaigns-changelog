@@ -8,20 +8,31 @@ import { DataTable } from "@/components/data-table"
 import type { CampaignEntry } from "@/types/api"
 
 interface CalendarResponse {
-    summary: { live: number; finished: number; scheduled: number }
-    prev_summary: { live: number; finished: number; scheduled: number }
-    providers: { live: number; finished: number; scheduled: number }
+    summary: {
+        campaigns: { live: number; finished: number; scheduled: number }
+        providers: { live: number; finished: number; scheduled: number }
+    }
+    prev_summary: {
+        campaigns: { live: number; finished: number; scheduled: number }
+        providers: { live: number; finished: number; scheduled: number }
+    }
     grouped: {
         live: CampaignEntry[]
         finished: CampaignEntry[]
         scheduled: CampaignEntry[]
     }
-    time_series: Record<string, { live: number; finished: number; scheduled: number }>
+    time_series: Record<string, {
+        campaigns: { live: number; finished: number; scheduled: number }
+        providers: { live: number; finished: number; scheduled: number }
+    }>
     filters: { cities: string[]; discount_types: string[] }
     error?: string
 }
 
+import { cn } from "@/lib/utils"
+
 export default function CalendarPage() {
+    const [metric, setMetric] = useState<'providers' | 'campaigns'>('providers')
     const [filters, setFilters] = useState<FilterState>({
         accountManager: "",
         spendObjective: "",
@@ -41,7 +52,7 @@ export default function CalendarPage() {
         const queryString = params.toString()
         return `/api/calendar${queryString ? `?${queryString}` : ''}`
     }, [filters])
-    
+
     const { data, loading, error } = useApi<CalendarResponse>(url)
 
     // Derived options
@@ -69,13 +80,16 @@ export default function CalendarPage() {
     // Chart data
     const chartData = useMemo(() => {
         if (!data?.time_series) return []
-        return Object.keys(data.time_series).sort().map(date => ({
-            date,
-            live: data.time_series[date].live || 0,
-            finished: data.time_series[date].finished || 0,
-            scheduled: data.time_series[date].scheduled || 0
-        }))
-    }, [data?.time_series])
+        return Object.keys(data.time_series).sort().map(date => {
+            const point = data.time_series[date][metric]
+            return {
+                date,
+                live: point.live || 0,
+                finished: point.finished || 0,
+                scheduled: point.scheduled || 0
+            }
+        })
+    }, [data?.time_series, metric])
 
     // Local filtering
     const filteredGroups = useMemo(() => {
@@ -99,12 +113,19 @@ export default function CalendarPage() {
 
     // Filtered stats for summary cards
     const filteredStats = useMemo(() => {
-        return {
-            live: filteredGroups.live.length,
-            finished: filteredGroups.finished.length,
-            scheduled: filteredGroups.scheduled.length
+        const getStats = (entries: CampaignEntry[]) => {
+            if (metric === 'providers') {
+                return new Set(entries.map(e => e.provider_id || e.provider_name)).size
+            }
+            return entries.length
         }
-    }, [filteredGroups])
+
+        return {
+            live: getStats(filteredGroups.live),
+            finished: getStats(filteredGroups.finished),
+            scheduled: getStats(filteredGroups.scheduled)
+        }
+    }, [filteredGroups, metric])
 
     if (loading && !data) return (
         <div className="flex items-center justify-center h-[50vh] text-muted-foreground">
@@ -137,24 +158,46 @@ export default function CalendarPage() {
             />
 
             <section className="space-y-4">
-                <h2 className="text-xl font-semibold tracking-tight">Daily Progression</h2>
+                <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-semibold tracking-tight">Daily Progression</h2>
+                    <div className="flex bg-muted p-1 rounded-md text-xs font-medium">
+                        <button
+                            onClick={() => setMetric('providers')}
+                            className={cn(
+                                "px-3 py-1.5 rounded-sm transition-all",
+                                metric === 'providers' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                            )}
+                        >
+                            Providers
+                        </button>
+                        <button
+                            onClick={() => setMetric('campaigns')}
+                            className={cn(
+                                "px-3 py-1.5 rounded-sm transition-all",
+                                metric === 'campaigns' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                            )}
+                        >
+                            Campaigns
+                        </button>
+                    </div>
+                </div>
                 <div className="grid gap-4 md:grid-cols-3">
                     <StatCard
                         label="Live"
                         value={filteredStats.live}
-                        previous={data?.prev_summary?.live || 0}
+                        previous={data?.prev_summary?.[metric]?.live || 0}
                         color="violet"
                     />
                     <StatCard
                         label="Finished"
                         value={filteredStats.finished}
-                        previous={data?.prev_summary?.finished || 0}
+                        previous={data?.prev_summary?.[metric]?.finished || 0}
                         color="amber"
                     />
                     <StatCard
                         label="Scheduled"
                         value={filteredStats.scheduled}
-                        previous={data?.prev_summary?.scheduled || 0}
+                        previous={data?.prev_summary?.[metric]?.scheduled || 0}
                         color="sky"
                     />
                 </div>

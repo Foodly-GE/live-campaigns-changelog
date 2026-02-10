@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import {
     Table,
     TableBody,
@@ -150,6 +150,21 @@ function ChangesCell({ changedFields, previousValues, row }: { changedFields: st
 
 
 export function DataTable({ data, emptyMessage = "No data available" }: DataTableProps) {
+    const sortedData = useMemo(() => {
+        if (!data) return []
+        return [...data].sort((a, b) => {
+            // 1. bonus % descending
+            const bonusA = a.bonus_percentage || 0
+            const bonusB = b.bonus_percentage || 0
+            if (bonusB !== bonusA) return bonusB - bonusA
+
+            // 2. campaign end ascending
+            const endA = a.campaign_end || ""
+            const endB = b.campaign_end || ""
+            return endA.localeCompare(endB)
+        })
+    }, [data])
+
     if (!data || data.length === 0) {
         return (
             <div className="rounded-md border p-8 text-center text-muted-foreground bg-muted/5 border-dashed">
@@ -182,7 +197,7 @@ export function DataTable({ data, emptyMessage = "No data available" }: DataTabl
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {data.map((row, i) => (
+                        {sortedData.map((row, i) => (
                             <TableRow key={i} className="group hover:bg-muted/30 transition-colors">
                                 <TableCell><ExpandableCell className="font-mono text-xs">{row.provider_id}</ExpandableCell></TableCell>
                                 <TableCell><ExpandableCell className="font-medium">{row.provider_name}</ExpandableCell></TableCell>
@@ -209,10 +224,10 @@ export function DataTable({ data, emptyMessage = "No data available" }: DataTabl
                                 <TableCell className="text-right font-mono">{row.min_basket_size || '-'}</TableCell>
                                 <TableCell><ExpandableCell className="font-mono text-[10px] text-muted-foreground">{row.campaign_id}</ExpandableCell></TableCell>
                                 <TableCell>
-                                    <ChangesCell 
-                                        changedFields={row.changed_fields} 
-                                        previousValues={row.previous_values} 
-                                        row={row} 
+                                    <ChangesCell
+                                        changedFields={row.changed_fields}
+                                        previousValues={row.previous_values}
+                                        row={row}
                                     />
                                 </TableCell>
                                 <TableCell>

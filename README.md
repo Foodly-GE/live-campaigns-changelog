@@ -13,33 +13,79 @@ A web application for tracking campaign changes, calendar views, and banner acti
 
 ## Quick Start
 
-### Development Mode
+### 1. Simple Startup (Combined Logs)
 
-1. **Start the Backend**:
-   ```bash
-   python backend/app.py
-   ```
-   Backend runs on `http://localhost:8080`
-
-2. **Start the Frontend** (in a new terminal):
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
-   Frontend dev server runs on `http://localhost:5173`
-
-### Production Mode
+If you just want to run everything in one container:
 
 ```bash
-cd frontend
-npm install
-npm run build
-cd ..
-python backend/app.py
+# Build
+docker build -t campaign-tracker .
+
+# Run (Ensure no spaces after the backslashes!)
+docker run -p 8080:8080 \
+  -v ~/.config/gcloud:/root/.config/gcloud \
+  campaign-tracker
 ```
 
-Access at `http://localhost:8080`
+### 2. Development Startup (Separate Logs)
+
+For better development with **separate logs**, **hot-reloading**, and **separate frontend/backend services**, use Docker Compose.
+
+**The configuration (`docker-compose.yml`):**
+
+```yaml
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - ~/.config/gcloud:/root/.config/gcloud
+    environment:
+      - PORT=8080
+      - ENVIRONMENT=development
+      - STORAGE_BACKEND=gcs
+    command: python backend/app.py
+
+  frontend:
+    image: node:22-alpine
+    working_dir: /app/frontend
+    volumes:
+      - ./frontend:/app/frontend
+    ports:
+      - "5173:5173"
+    command: sh -c "npm install && npm run dev -- --host"
+    environment:
+      - VITE_API_URL=http://localhost:8080
+```
+
+**Commands:**
+
+```bash
+# Start both services
+docker-compose up -d
+
+# View separate logs
+docker-compose logs -f backend   # Just backend logs
+docker-compose logs -f frontend  # Just frontend logs
+docker-compose logs -f           # Both logs (interleaved)
+
+> **Tip**: To view logs truly side-by-side, split your terminal into two panes (e.g., `Cmd + \` in VS Code) and run the backend and frontend log commands in their respective panes.
+```
+
+### 3. Shutdown
+
+```bash
+# If using docker run:
+Press Ctrl+C
+
+# If using docker-compose:
+docker-compose down
+```
+
+
 
 ## Documentation
 

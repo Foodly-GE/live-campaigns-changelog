@@ -25,8 +25,11 @@ interface ChangelogResponse {
     all_recent_entries: CampaignEntry[]  // Raw entries for client-side filtering
 }
 
+import { cn } from "@/lib/utils"
+
 export default function ChangelogPage() {
     const [selectedDate, setSelectedDate] = useState<string>("")
+    const [metric, setMetric] = useState<'providers' | 'campaigns'>('providers')
     const [filters, setFilters] = useState<FilterState>({
         accountManager: "",
         spendObjective: "",
@@ -63,7 +66,7 @@ export default function ChangelogPage() {
     // Chart data - apply filters to raw entries and aggregate by date
     const chartData = useMemo(() => {
         if (!data?.all_recent_entries) return []
-        
+
         const filterFn = (e: CampaignEntry) => {
             if (filters.accountManager && e.account_manager !== filters.accountManager) return false
             if (filters.spendObjective && e.spend_objective !== filters.spendObjective) return false
@@ -72,35 +75,45 @@ export default function ChangelogPage() {
             if (filters.providers.length > 0 && !filters.providers.includes(e.provider_name)) return false
             return true
         }
-        
+
         const filteredEntries = data.all_recent_entries.filter(filterFn)
-        
+
         // Aggregate by date
-        const byDate: Record<string, { start: number; update: number; end: number }> = {}
-        
+        const byDate: Record<string, { start: any; update: any; end: any }> = {}
+
         for (const entry of filteredEntries) {
             const date = entry.date || ''
             if (!byDate[date]) {
-                byDate[date] = { start: 0, update: 0, end: 0 }
+                byDate[date] = metric === 'providers'
+                    ? { start: new Set<string>(), update: new Set<string>(), end: new Set<string>() }
+                    : { start: 0, update: 0, end: 0 }
             }
             const eventType = entry.event_type
-            if (eventType === 'campaign-start') byDate[date].start++
-            else if (eventType === 'campaign-update') byDate[date].update++
-            else if (eventType === 'campaign-end') byDate[date].end++
+            const pId = entry.provider_id || entry.provider_name
+
+            if (metric === 'providers') {
+                if (eventType === 'campaign-start') (byDate[date].start as Set<string>).add(pId)
+                else if (eventType === 'campaign-update') (byDate[date].update as Set<string>).add(pId)
+                else if (eventType === 'campaign-end') (byDate[date].end as Set<string>).add(pId)
+            } else {
+                if (eventType === 'campaign-start') byDate[date].start++
+                else if (eventType === 'campaign-update') byDate[date].update++
+                else if (eventType === 'campaign-end') byDate[date].end++
+            }
         }
-        
+
         return Object.keys(byDate).sort().map(date => ({
             date,
-            start: byDate[date].start,
-            update: byDate[date].update,
-            end: byDate[date].end
+            start: metric === 'providers' ? (byDate[date].start as Set<string>).size : byDate[date].start,
+            update: metric === 'providers' ? (byDate[date].update as Set<string>).size : byDate[date].update,
+            end: metric === 'providers' ? (byDate[date].end as Set<string>).size : byDate[date].end,
         }))
-    }, [data?.all_recent_entries, filters])
+    }, [data?.all_recent_entries, filters, metric])
 
     // Filtered stats for summary cards
     const filteredStats = useMemo(() => {
-        if (!data?.grouped) return { start: 0, update: 0, end: 0 }
-        
+        if (!data?.grouped) return { current: { start: 0, update: 0, end: 0 }, previous: { start: 0, update: 0, end: 0 } }
+
         const filterFn = (e: CampaignEntry) => {
             if (filters.accountManager && e.account_manager !== filters.accountManager) return false
             if (filters.spendObjective && e.spend_objective !== filters.spendObjective) return false
@@ -109,13 +122,31 @@ export default function ChangelogPage() {
             if (filters.providers.length > 0 && !filters.providers.includes(e.provider_name)) return false
             return true
         }
-        
-        return {
-            start: (data.grouped['campaign-start'] || []).filter(filterFn).length,
-            update: (data.grouped['campaign-update'] || []).filter(filterFn).length,
-            end: (data.grouped['campaign-end'] || []).filter(filterFn).length
+
+        const getStats = (entries: CampaignEntry[]) => {
+            const filtered = entries.filter(filterFn)
+            if (metric === 'providers') {
+                return new Set(filtered.map(e => e.provider_id || e.provider_name)).size
+            }
+            return filtered.length
         }
-    }, [data?.grouped, filters])
+
+        const current = {
+            start: getStats(data.grouped['campaign-start'] || []),
+            update: getStats(data.grouped['campaign-update'] || []),
+            end: getStats(data.grouped['campaign-end'] || [])
+        }
+
+        const prevDate = data.dates[1]
+        const prevEntries = (data.all_recent_entries || []).filter(e => e.date === prevDate)
+        const previous = {
+            start: getStats(prevEntries.filter(e => e.event_type === 'campaign-start')),
+            update: getStats(prevEntries.filter(e => e.event_type === 'campaign-update')),
+            end: getStats(prevEntries.filter(e => e.event_type === 'campaign-end'))
+        }
+
+        return { current, previous }
+    }, [data, filters, metric])
 
     // Filtered detailed data
     const filteredGroups = useMemo(() => {
@@ -170,24 +201,46 @@ export default function ChangelogPage() {
             />
 
             <section className="space-y-4">
-                <h2 className="text-xl font-semibold tracking-tight">Progression</h2>
+                <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-semibold tracking-tight">Daily Progression</h2>
+                    <div className="flex bg-muted p-1 rounded-md text-xs font-medium">
+                        <button
+                            onClick={() => setMetric('providers')}
+                            className={cn(
+                                "px-3 py-1.5 rounded-sm transition-all",
+                                metric === 'providers' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                            )}
+                        >
+                            Providers
+                        </button>
+                        <button
+                            onClick={() => setMetric('campaigns')}
+                            className={cn(
+                                "px-3 py-1.5 rounded-sm transition-all",
+                                metric === 'campaigns' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                            )}
+                        >
+                            Campaigns
+                        </button>
+                    </div>
+                </div>
                 <div className="grid gap-4 md:grid-cols-3">
                     <StatCard
                         label="Campaign Start"
-                        value={filteredStats.start}
-                        previous={data?.summary?.prev_stats?.['campaign-start'] || 0}
+                        value={filteredStats.current.start}
+                        previous={filteredStats.previous.start}
                         color="violet"
                     />
                     <StatCard
                         label="Campaign Update"
-                        value={filteredStats.update}
-                        previous={data?.summary?.prev_stats?.['campaign-update'] || 0}
+                        value={filteredStats.current.update}
+                        previous={filteredStats.previous.update}
                         color="sky"
                     />
                     <StatCard
                         label="Campaign End"
-                        value={filteredStats.end}
-                        previous={data?.summary?.prev_stats?.['campaign-end'] || 0}
+                        value={filteredStats.current.end}
+                        previous={filteredStats.previous.end}
                         color="amber"
                     />
                 </div>

@@ -45,6 +45,7 @@ function SimpleStat({ label, value, color }: { label: string, value: number, col
 }
 
 export default function BannersPage() {
+    const [metric, setMetric] = useState<'providers' | 'campaigns'>('providers')
     const [filters, setFilters] = useState<FilterState>({
         accountManager: "",
         spendObjective: "",
@@ -101,12 +102,18 @@ export default function BannersPage() {
 
     // Filtered stats for summary cards
     const filteredStats = useMemo(() => {
-        return {
-            start: filteredGroups.start.length,
-            update: filteredGroups.update.length,
-            end: filteredGroups.end.length
+        const getStats = (entries: CampaignEntry[]) => {
+            if (metric === 'providers') {
+                return new Set(entries.map(e => e.provider_id || e.provider_name)).size
+            }
+            return entries.length
         }
-    }, [filteredGroups])
+        return {
+            start: getStats(filteredGroups.start),
+            update: getStats(filteredGroups.update),
+            end: getStats(filteredGroups.end)
+        }
+    }, [filteredGroups, metric])
 
 
     if (loading && !data) return (
@@ -141,7 +148,29 @@ export default function BannersPage() {
             />
 
             <section className="space-y-4">
-                <h2 className="text-xl font-semibold tracking-tight">Summary</h2>
+                <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-semibold tracking-tight">Daily Progression</h2>
+                    <div className="flex bg-muted p-1 rounded-md text-xs font-medium">
+                        <button
+                            onClick={() => setMetric('providers')}
+                            className={cn(
+                                "px-3 py-1.5 rounded-sm transition-all",
+                                metric === 'providers' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                            )}
+                        >
+                            Providers
+                        </button>
+                        <button
+                            onClick={() => setMetric('campaigns')}
+                            className={cn(
+                                "px-3 py-1.5 rounded-sm transition-all",
+                                metric === 'campaigns' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                            )}
+                        >
+                            Campaigns
+                        </button>
+                    </div>
+                </div>
                 <div className="grid gap-4 md:grid-cols-3">
                     <SimpleStat
                         label="Banner Start"

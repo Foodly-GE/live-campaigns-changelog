@@ -6,6 +6,8 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { MultiSelect, type Option } from "@/components/multi-select"
+import { Button } from "@/components/ui/button"
+import { RotateCcw } from "lucide-react"
 
 export interface FilterState {
     accountManager: string
@@ -40,6 +42,19 @@ export function FilterBar({ filters, options, onChange, showDate }: FilterBarPro
 
     // Convert string arrays to Option objects for MultiSelect
     const providerOptions: Option[] = options.providers.map(p => ({ label: p, value: p }))
+
+    const handleReset = () => {
+        onChange({
+            accountManager: "",
+            spendObjective: "",
+            bonusType: "",
+            providers: [],
+            city: "",
+            date: filters.date // Keep date if it exists, or maybe reset it too? Usually date filter is separate.
+        })
+    }
+
+    const hasFilters = filters.accountManager || filters.spendObjective || filters.bonusType || filters.providers.length > 0 || filters.city
 
     return (
         <div className="flex flex-wrap gap-4 p-4 bg-muted/20 rounded-lg border">
@@ -129,6 +144,19 @@ export function FilterBar({ filters, options, onChange, showDate }: FilterBarPro
                     </Select>
                 </div>
             )}
+
+            <div className="flex items-end flex-1 justify-end">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleReset}
+                    disabled={!hasFilters}
+                    className="h-10 px-3 flex gap-2 text-muted-foreground hover:text-foreground"
+                >
+                    <RotateCcw className="h-4 w-4" />
+                    Reset Filters
+                </Button>
+            </div>
         </div>
     )
 }
