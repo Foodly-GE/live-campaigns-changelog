@@ -8,8 +8,10 @@ import {
     TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import type { CampaignEntry } from "@/types/api"
 import { cn } from "@/lib/utils"
+import { Copy, Check } from "lucide-react"
 
 interface DataTableProps {
     data: CampaignEntry[]
@@ -89,26 +91,59 @@ function getBannerBadge(action: string | undefined) {
     return <Badge variant="outline" className={className}>{action}</Badge>
 }
 
-function formatDiff(changedFields: string[] | undefined, previousValues: Record<string, any> | undefined, row: CampaignEntry) {
-    if (!changedFields || changedFields.length === 0) return null
+function ChangesCell({ changedFields, previousValues, row }: { changedFields: string[] | undefined, previousValues: Record<string, any> | undefined, row: CampaignEntry }) {
+    const [copied, setCopied] = useState(false)
+
+    if (!changedFields || changedFields.length === 0) {
+        return <span className="text-muted-foreground/30">—</span>
+    }
+
+    const copyToClipboard = () => {
+        const text = changedFields.map((field) => {
+            const prev = previousValues ? previousValues[field] : undefined
+            // @ts-ignore - dynamic access
+            const curr = row[field]
+            return `${field}: ${prev ?? '-'} → ${curr ?? '-'}`
+        }).join('\n')
+
+        navigator.clipboard.writeText(text).then(() => {
+            setCopied(true)
+            setTimeout(() => setCopied(false), 2000)
+        })
+    }
 
     return (
-        <div className="space-y-1 text-xs">
-            {changedFields.map((field) => {
-                const prev = previousValues ? previousValues[field] : undefined
-                // @ts-ignore - dynamic access
-                const curr = row[field]
-                return (
-                    <div key={field} className="flex flex-col">
-                        <span className="font-semibold text-muted-foreground text-[10px]">{field}:</span>
-                        <div className="flex items-center gap-1">
-                            <span className="line-through text-rose-600/70 dark:text-rose-400/70 text-[10px] truncate max-w-[60px]" title={String(prev)}>{String(prev ?? '-')}</span>
-                            <span className="text-muted-foreground">→</span>
-                            <span className="text-emerald-600 dark:text-emerald-400 font-medium text-[10px] truncate max-w-[60px]" title={String(curr)}>{String(curr ?? '-')}</span>
+        <div className="flex items-start gap-2">
+            <div className="space-y-1 text-xs flex-1">
+                {changedFields.map((field) => {
+                    const prev = previousValues ? previousValues[field] : undefined
+                    // @ts-ignore - dynamic access
+                    const curr = row[field]
+                    return (
+                        <div key={field} className="flex flex-col">
+                            <span className="font-semibold text-muted-foreground text-[10px]">{field}:</span>
+                            <div className="flex items-center gap-1">
+                                <span className="line-through text-rose-600/70 dark:text-rose-400/70 text-[10px] truncate max-w-[60px]" title={String(prev)}>{String(prev ?? '-')}</span>
+                                <span className="text-muted-foreground">→</span>
+                                <span className="text-emerald-600 dark:text-emerald-400 font-medium text-[10px] truncate max-w-[60px]" title={String(curr)}>{String(curr ?? '-')}</span>
+                            </div>
                         </div>
-                    </div>
-                )
-            })}
+                    )
+                })}
+            </div>
+            <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                onClick={copyToClipboard}
+                title="Copy changes"
+            >
+                {copied ? (
+                    <Check className="h-3 w-3 text-emerald-600" />
+                ) : (
+                    <Copy className="h-3 w-3" />
+                )}
+            </Button>
         </div>
     )
 }
@@ -174,11 +209,11 @@ export function DataTable({ data, emptyMessage = "No data available" }: DataTabl
                                 <TableCell className="text-right font-mono">{row.min_basket_size || '-'}</TableCell>
                                 <TableCell><ExpandableCell className="font-mono text-[10px] text-muted-foreground">{row.campaign_id}</ExpandableCell></TableCell>
                                 <TableCell>
-                                    {row.changed_fields && row.changed_fields.length > 0 ? (
-                                        formatDiff(row.changed_fields, row.previous_values, row)
-                                    ) : (
-                                        <span className="text-muted-foreground/30">—</span>
-                                    )}
+                                    <ChangesCell 
+                                        changedFields={row.changed_fields} 
+                                        previousValues={row.previous_values} 
+                                        row={row} 
+                                    />
                                 </TableCell>
                                 <TableCell>
                                     <ExpandableCell className="font-mono text-[10px] text-muted-foreground/60 max-w-[80px]">
