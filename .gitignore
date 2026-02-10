@@ -29,3 +29,5 @@ dist/
 # Service account keys
 *-service-account*.json
 *-credentials*.json
+*.csv
+data/

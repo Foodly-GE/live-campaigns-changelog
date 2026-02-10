@@ -1,15 +1,29 @@
-FROM python:3.11-slim
+# Stage 1: Build the frontend
+FROM node:18-alpine AS frontend-build
+WORKDIR /app/frontend
 
+# Install dependencies
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+
+# Copy source and build
+COPY frontend/ ./
+RUN npm run build
+
+# Stage 2: Production image
+FROM python:3.11-slim
 WORKDIR /app
 
 # Install dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Copy backend and data
 COPY backend/ backend/
-COPY frontend/ frontend/
 COPY data/ data/
+
+# Copy built frontend assets from Stage 1
+COPY --from=frontend-build /app/frontend/dist /app/frontend/dist
 
 # Set environment variables
 ENV PORT=8080
