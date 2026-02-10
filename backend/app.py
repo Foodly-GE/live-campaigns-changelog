@@ -347,6 +347,11 @@ def api_sync():
         # 6. Check if we already have entries for this date
         existing_dates = storage.get_changelog_dates()
         if date_str in existing_dates:
+            # Even if changelog exists, ensure snapshot is saved for calendar endpoint
+            print(f"Changelog for {date_str} already exists, but ensuring snapshot is saved...")
+            storage.save_snapshot(current['drive_file']['name'], current['content'])
+            print(f"✅ Snapshot saved to GCS")
+            
             return jsonify({
                 'success': True,
                 'skipped': True,
