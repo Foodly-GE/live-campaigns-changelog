@@ -28,3 +28,6 @@ steps:
 
 images:
   - 'gcr.io/$PROJECT_ID/campaign-changelog:$COMMIT_SHA'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
