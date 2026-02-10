@@ -18,8 +18,9 @@ from backend.services.calendar import (
     aggregate_banners_by_date,
     get_time_series_data
 )
-from backend.utils.csv_parser import load_snapshot, get_latest_snapshot
-from backend.utils.storage import Storage
+from backend.utils.csv_parser import load_snapshot, load_snapshot_from_bytes, get_latest_snapshot
+from backend.utils.storage import get_storage
+from backend.config import Config
 
 
 # Get the project root directory
@@ -34,8 +35,8 @@ app = Flask(
 CORS(app) # Allow dev server to access API
 
 # Configuration
-DATA_DIR = Path(os.environ.get('DATA_DIR', PROJECT_ROOT / 'data'))
-storage = Storage(DATA_DIR)
+DATA_DIR = Path(Config.DATA_DIR)
+storage = get_storage()
 
 # ============== Pages ==============
 
@@ -123,18 +124,43 @@ def api_changelog():
 def api_calendar():
     """Get calendar data."""
     # Load latest snapshot
-    snapshots_dir = DATA_DIR / 'snapshots'
-    latest_file = get_latest_snapshot(snapshots_dir)
+    # Support both local and GCS
+    df = None
     
-    if not latest_file:
-        return jsonify({
-            'error': 'No snapshot data available',
-            'summary': {'live': 0, 'scheduled': 0, 'finished': 0},
-            'providers': {'live': 0, 'scheduled': 0, 'finished': 0},
-            'campaigns': []
-        })
-    
-    df = load_snapshot(latest_file)
+    if Config.STORAGE_BACKEND == 'gcs':
+        # GCS mode
+        snapshots = storage.list_snapshots()
+        if not snapshots:
+             return jsonify({
+                'error': 'No snapshot data available',
+                'summary': {'live': 0, 'scheduled': 0, 'finished': 0},
+                'providers': {'live': 0, 'scheduled': 0, 'finished': 0},
+                'campaigns': []
+            })
+        
+        snapshots.sort(reverse=True) # Assumes YYYY-MM-DD or similar sortable names
+        latest_file = snapshots[0]
+        content = storage.get_snapshot_content(latest_file)
+        df = load_snapshot_from_bytes(content)
+        
+    else:
+        # Local mode    
+        snapshots_dir = DATA_DIR / 'snapshots'
+        # ensure dir exists
+        snapshots_dir.mkdir(parents=True, exist_ok=True)
+        
+        latest_file = get_latest_snapshot(snapshots_dir)
+        
+        if not latest_file:
+            return jsonify({
+                'error': 'No snapshot data available',
+                'summary': {'live': 0, 'scheduled': 0, 'finished': 0},
+                'providers': {'live': 0, 'scheduled': 0, 'finished': 0},
+                'campaigns': []
+            })
+        
+        df = load_snapshot(latest_file)
+
     today = datetime.now()
     
     # Apply filters from request
@@ -253,42 +279,72 @@ def api_banners():
     })
 
 
-@app.route('/api/process', methods=['POST'])
-def api_process():
-    """Process a new snapshot file."""
-    # This would be called by Cloud Scheduler or manually
-    snapshots_dir = DATA_DIR / 'snapshots'
-    
-    # Get current and previous snapshots
-    csv_files = sorted(snapshots_dir.glob('*.csv'))
-    
-    if not csv_files:
-        return jsonify({'error': 'No snapshot files found'}), 400
-    
-    current_file = csv_files[-1]
-    previous_file = csv_files[-2] if len(csv_files) > 1 else None
-    
-    # Load dataframes
-    current_df = load_snapshot(current_file)
-    previous_df = load_snapshot(previous_file) if previous_file else None
-    
-    # Compare and generate changelog
-    process_date = datetime.now()
-    entries = compare_snapshots(previous_df, current_df, process_date)
-    
-    # Save entries
-    storage.append_changelog_entries(entries)
-    
-    # Update master state
-    state = storage.load_master_state()
-    state['last_processed'] = process_date.isoformat()
-    storage.save_master_state(state)
-    
-    return jsonify({
-        'success': True,
-        'entries_created': len(entries),
-        'date': process_date.strftime('%Y-%m-%d')
-    })
+@app.route('/api/sync', methods=['POST'])
+def api_sync():
+    """
+    Sync snapshots from Google Drive and process changes.
+    Can be triggered by Cloud Scheduler.
+    """
+    try:
+        # 1. Download latest from Drive (if configured)
+        drive_file_name = None
+        drive_content = None
+        
+        if Config.DRIVE_FOLDER_ID:
+            from backend.services.drive_client import DriveClient
+            drive_client = DriveClient()
+            drive_file_name, drive_content = drive_client.get_latest_snapshot()
+            
+            if drive_file_name and drive_content:
+                # Save to storage (GCS or local)
+                storage.save_snapshot(drive_file_name, drive_content)
+                print(f"Downloaded and saved: {drive_file_name}")
+        
+        # 2. Get 2 most recent snapshots from storage to compare
+        snapshots = storage.list_snapshots()
+        snapshots.sort(reverse=True)
+        
+        if len(snapshots) < 1:
+            return jsonify({'error': 'No snapshots found available for processing'}), 400
+            
+        current_name = snapshots[0]
+        # Only compare if we have a previous one
+        previous_name = snapshots[1] if len(snapshots) > 1 else None
+        
+        # Load dataframes
+        current_bytes = storage.get_snapshot_content(current_name)
+        current_df = load_snapshot_from_bytes(current_bytes)
+        
+        previous_df = None
+        if previous_name:
+            prev_bytes = storage.get_snapshot_content(previous_name)
+            previous_df = load_snapshot_from_bytes(prev_bytes)
+            
+        # 3. Compare and generate changelog
+        process_date = datetime.now()
+        entries = compare_snapshots(previous_df, current_df, process_date)
+        
+        # 4. Save entries
+        storage.append_changelog_entries(entries)
+        
+        # 5. Update master state
+        state = storage.load_master_state()
+        state['last_processed'] = process_date.isoformat()
+        storage.save_master_state(state)
+        
+        return jsonify({
+            'success': True,
+            'downloaded_file': drive_file_name,
+            'processed_file': current_name,
+            'compared_against': previous_name,
+            'entries_created': len(entries),
+            'date': process_date.strftime('%Y-%m-%d')
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
 
 
 if __name__ == '__main__':

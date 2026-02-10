@@ -72,3 +72,33 @@ class Storage:
         all_entries = self.load_changelog()
         dates = sorted(set(e.get('date') for e in all_entries if e.get('date')))
         return dates
+
+    def save_snapshot(self, filename: str, content: bytes) -> None:
+        """Save a snapshot CSV file locally."""
+        snapshots_dir = self.data_dir / 'snapshots'
+        snapshots_dir.mkdir(parents=True, exist_ok=True)
+        (snapshots_dir / filename).write_bytes(content)
+
+    def list_snapshots(self) -> List[str]:
+        """List snapshot filenames locally."""
+        snapshots_dir = self.data_dir / 'snapshots'
+        if not snapshots_dir.exists():
+            return []
+        return [p.name for p in snapshots_dir.glob('*.csv')]
+
+    def get_snapshot_content(self, filename: str) -> bytes:
+        """Get content of a snapshot file."""
+        snapshots_dir = self.data_dir / 'snapshots'
+        return (snapshots_dir / filename).read_bytes()
+
+
+def get_storage(config=None):
+    """Factory method to get the appropriate storage backend."""
+    # Avoid circular imports
+    from backend.config import Config
+    
+    if Config.STORAGE_BACKEND == 'gcs':
+        from backend.utils.gcs_storage import GCSStorage
+        return GCSStorage(Config.GCS_BUCKET, Config.GCS_PROJECT)
+    
+    return Storage(Path(Config.DATA_DIR))

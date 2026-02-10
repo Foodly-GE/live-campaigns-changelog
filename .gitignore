@@ -25,3 +25,7 @@ dist/
 .agent/
 .server.log
 .server.pid
+
+# Service account keys
+*-service-account*.json
+*-credentials*.json

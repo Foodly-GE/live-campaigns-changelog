@@ -52,6 +52,31 @@ def load_snapshot(file_path: Path) -> pd.DataFrame:
     return df
 
 
+def load_snapshot_from_bytes(data: bytes) -> pd.DataFrame:
+    """
+    Load a CSV snapshot from bytes and normalize column names.
+    
+    Args:
+        data: CSV content as bytes
+        
+    Returns:
+        DataFrame with normalized column names
+    """
+    import io
+    df = pd.read_csv(io.BytesIO(data))
+    
+    # Rename columns to internal names
+    df = df.rename(columns=COLUMN_MAPPING)
+    
+    # Parse date columns
+    date_columns = ['campaign_start', 'campaign_end']
+    for col in date_columns:
+        if col in df.columns:
+            df[col] = pd.to_datetime(df[col], errors='coerce')
+    
+    return df
+
+
 def get_latest_snapshot(snapshots_dir: Path) -> Optional[Path]:
     """
     Get the most recent snapshot file from a directory.

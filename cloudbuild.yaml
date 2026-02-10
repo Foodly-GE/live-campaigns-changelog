@@ -21,6 +21,10 @@ steps:
       - '--platform'
       - 'managed'
       - '--allow-unauthenticated'
+      - '--set-env-vars'
+      - 'ENVIRONMENT=production,STORAGE_BACKEND=gcs,GCS_PROJECT=industrial-gist-470307-k4,GCS_BUCKET=campaign-changelog-data,DRIVE_FOLDER_ID=1U4A3XTHb7j5lJeJvTmMudBmSiHIRT08x,SNAPSHOT_FILE_SUBSTRING=smart-promos-status-changelog'
+      - '--service-account'
+      - 'campaign-changelog-sa@$PROJECT_ID.iam.gserviceaccount.com'
 
 images:
   - 'gcr.io/$PROJECT_ID/campaign-changelog:$COMMIT_SHA'

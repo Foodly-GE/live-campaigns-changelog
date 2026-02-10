@@ -15,6 +15,9 @@ COPY data/ data/
 ENV PORT=8080
 ENV DATA_DIR=/app/data
 ENV PYTHONPATH=/app
+ENV ENVIRONMENT=production
+ENV STORAGE_BACKEND=gcs
+ENV GCS_PROJECT=industrial-gist-470307-k4
 
 # Expose port
 EXPOSE 8080
