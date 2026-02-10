@@ -293,7 +293,7 @@ export default function AdminPage() {
               <div>
                 <div className="font-medium">Download from Google Drive</div>
                 <div className="text-muted-foreground">
-                  Fetch the 2 most recent CSV files into memory (sorted by modification time)
+                  Fetch all CSV files from the configured Drive folder
                 </div>
               </div>
             </div>
@@ -303,9 +303,9 @@ export default function AdminPage() {
                 2
               </div>
               <div>
-                <div className="font-medium">Compare Snapshots</div>
+                <div className="font-medium">Validate & Sort by Ingestion Time</div>
                 <div className="text-muted-foreground">
-                  Detect campaign starts, ends, and updates by comparing campaign hashes
+                  Extract "Last Ingested Ts Time" from each CSV and sort by most recent ingestion (not file modification time)
                 </div>
               </div>
             </div>
@@ -313,6 +313,18 @@ export default function AdminPage() {
             <div className="flex items-start gap-3">
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-semibold">
                 3
+              </div>
+              <div>
+                <div className="font-medium">Compare Top 2 Snapshots</div>
+                <div className="text-muted-foreground">
+                  Detect campaign starts, ends, and updates by comparing campaign hashes between the 2 most recently ingested files
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-semibold">
+                4
               </div>
               <div>
                 <div className="font-medium">Generate Changelog</div>
@@ -324,12 +336,12 @@ export default function AdminPage() {
 
             <div className="flex items-start gap-3">
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-semibold">
-                4
+                5
               </div>
               <div>
                 <div className="font-medium">Persist to GCS</div>
                 <div className="text-muted-foreground">
-                  Append changelog entries and update processing state (raw CSVs are not stored)
+                  Save changelog entries, latest snapshot CSV (for Calendar page), and master state. Keep only 10 most recent snapshots.
                 </div>
               </div>
             </div>

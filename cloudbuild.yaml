@@ -1,11 +1,30 @@
 steps:
-  # Build the container image
+  # Pull previous image for layer caching
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'gcr.io/$PROJECT_ID/campaign-changelog:$COMMIT_SHA', '.']
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        docker pull gcr.io/$PROJECT_ID/campaign-changelog:latest || exit 0
 
-  # Push the container image to Container Registry
+  # Build the container image with cache
+  - name: 'gcr.io/cloud-builders/docker'
+    args: 
+      - 'build'
+      - '--cache-from'
+      - 'gcr.io/$PROJECT_ID/campaign-changelog:latest'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/campaign-changelog:$COMMIT_SHA'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/campaign-changelog:latest'
+      - '.'
+
+  # Push the container images to Container Registry
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', 'gcr.io/$PROJECT_ID/campaign-changelog:$COMMIT_SHA']
+  
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/campaign-changelog:latest']
 
   # Deploy container image to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -28,7 +47,9 @@ steps:
 
 images:
   - 'gcr.io/$PROJECT_ID/campaign-changelog:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/campaign-changelog:latest'
 
 options:
   logging: CLOUD_LOGGING_ONLY
   default_logs_bucket_behavior: REGIONAL_USER_OWNED_BUCKET
+  machineType: 'E2_HIGHCPU_8'  # Faster builds

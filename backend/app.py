@@ -130,7 +130,19 @@ def api_calendar():
     """Get calendar data from the latest snapshot in GCS."""
     
     # Get latest snapshot from GCS (saved during sync)
-    filename, content = storage.get_latest_snapshot()
+    try:
+        filename, content = storage.get_latest_snapshot()
+        print(f"Calendar endpoint: Retrieved snapshot - filename={filename}, content_size={len(content) if content else 0}")
+    except Exception as e:
+        print(f"Calendar endpoint: Error retrieving snapshot - {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'error': f'Error retrieving snapshot: {str(e)}',
+            'summary': {'live': 0, 'scheduled': 0, 'finished': 0},
+            'providers': {'live': 0, 'scheduled': 0, 'finished': 0},
+            'campaigns': []
+        })
     
     if not filename or not content:
         return jsonify({
@@ -355,7 +367,9 @@ def api_sync():
         storage.append_changelog_entries(entries)
         
         # 9. Save the current snapshot to GCS for calendar endpoint
+        print(f"Saving snapshot to GCS: {current['drive_file']['name']}, size={len(current['content'])} bytes")
         storage.save_snapshot(current['drive_file']['name'], current['content'])
+        print(f"✅ Snapshot saved successfully")
         
         # 10. Cleanup old snapshots (keep only 10 most recent)
         deleted_count = storage.cleanup_old_snapshots(keep_count=10)
