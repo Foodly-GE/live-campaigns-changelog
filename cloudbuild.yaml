@@ -13,7 +13,7 @@ steps:
     args:
       - 'run'
       - 'deploy'
-      - 'campaign-changelog'
+      - 'live-campaigns-changelog'
       - '--image'
       - 'gcr.io/$PROJECT_ID/campaign-changelog:$COMMIT_SHA'
       - '--region'
