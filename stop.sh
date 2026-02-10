@@ -1,27 +1,21 @@
 #!/bin/bash
+echo "Stopping services..."
 
-# Stop the Campaign Changelog server
-cd "$(dirname "$0")"
+# Function to kill process on a port
+function kill_port() {
+  local port=$1
+  local name=$2
+  
+  pid=$(lsof -ti:$port)
+  if [ -n "$pid" ]; then
+    echo "Stopping $name (PID: $pid) on port $port..."
+    kill -9 $pid
+  else
+    echo "$name is not running on port $port."
+  fi
+}
 
-if [ ! -f .server.pid ]; then
-    echo "No server PID file found"
-    exit 0
-fi
+kill_port 8080 "Backend"
+kill_port 5173 "Frontend"
 
-PID=$(cat .server.pid)
-
-if ps -p $PID > /dev/null 2>&1; then
-    echo "Stopping server (PID: $PID)..."
-    kill $PID
-    sleep 1
-    
-    if ps -p $PID > /dev/null 2>&1; then
-        kill -9 $PID
-    fi
-    
-    echo "✓ Server stopped"
-else
-    echo "Server not running"
-fi
-
-rm -f .server.pid
+echo "All services stopped."

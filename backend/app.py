@@ -1,7 +1,8 @@
 """
 Flask application - main entry point.
 """
-from flask import Flask, render_template, jsonify, request, redirect, url_for
+from flask import Flask, jsonify, request, send_from_directory
+from flask_cors import CORS
 from pathlib import Path
 from datetime import datetime, timedelta
 import os
@@ -24,52 +25,27 @@ from backend.utils.storage import Storage
 # Get the project root directory
 PROJECT_ROOT = Path(__file__).parent.parent
 
+# Serve from frontend/dist
 app = Flask(
     __name__,
-    template_folder=str(PROJECT_ROOT / 'frontend' / 'templates'),
-    static_folder=str(PROJECT_ROOT / 'frontend' / 'static')
+    static_folder=str(PROJECT_ROOT / 'frontend' / 'dist'),
+    static_url_path=''
 )
+CORS(app) # Allow dev server to access API
 
 # Configuration
 DATA_DIR = Path(os.environ.get('DATA_DIR', PROJECT_ROOT / 'data'))
 storage = Storage(DATA_DIR)
 
-
-
 # ============== Pages ==============
 
-@app.route('/')
-def index():
-    """Redirect to changelog page."""
-    return redirect(url_for('changelog_page'))
-
-
-@app.route('/changelog')
-def changelog_page():
-    """Render changelog page."""
-    # Dates for the dropdown are still useful
-    dates = storage.get_changelog_dates()
-    # Sort descending
-    dates.sort(reverse=True)
-    return render_template('changelog.html', 
-                         active_page='changelog',
-                         dates=dates)
-
-
-@app.route('/calendar')
-def calendar_page():
-    """Render calendar page."""
-    return render_template('calendar.html', active_page='calendar')
-
-
-@app.route('/banners')
-def banners_page():
-    """Render banner actions page."""
-    dates = storage.get_changelog_dates()
-    dates.sort(reverse=True)
-    return render_template('banners.html', 
-                         active_page='banners',
-                         dates=dates)
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve(path):
+    if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
+        return send_from_directory(app.static_folder, path)
+    else:
+        return send_from_directory(app.static_folder, 'index.html')
 
 
 # ============== API Endpoints ==============
