@@ -55,3 +55,37 @@ class GCSStorage:
         dates = sorted(set(e.get('date') for e in all_entries if e.get('date')))
         return dates
 
+    def save_snapshot(self, filename: str, content: bytes) -> None:
+        """Save a snapshot CSV file to GCS."""
+        blob = self.bucket.blob(f'snapshots/{filename}')
+        blob.upload_from_string(content)
+
+    def list_snapshots(self) -> List[str]:
+        """List snapshot filenames in GCS."""
+        blobs = self.bucket.list_blobs(prefix='snapshots/')
+        return [blob.name.replace('snapshots/', '') for blob in blobs if blob.name.endswith('.csv')]
+
+    def get_snapshot_content(self, filename: str) -> bytes:
+        """Get content of a snapshot file from GCS."""
+        blob = self.bucket.blob(f'snapshots/{filename}')
+        if not blob.exists():
+            return None
+        return blob.download_as_bytes()
+    
+    def get_latest_snapshot(self) -> tuple[Optional[str], Optional[bytes]]:
+        """Get the most recently saved snapshot from GCS."""
+        blobs = list(self.bucket.list_blobs(prefix='snapshots/'))
+        csv_blobs = [b for b in blobs if b.name.endswith('.csv')]
+        
+        if not csv_blobs:
+            return None, None
+        
+        # Sort by updated time, most recent first
+        csv_blobs.sort(key=lambda b: b.updated, reverse=True)
+        latest = csv_blobs[0]
+        
+        filename = latest.name.replace('snapshots/', '')
+        content = latest.download_as_bytes()
+        
+        return filename, content
+

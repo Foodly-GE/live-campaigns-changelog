@@ -127,25 +127,14 @@ def api_changelog():
 
 @app.route('/api/calendar')
 def api_calendar():
-    """Get calendar data from the latest snapshot in Google Drive."""
+    """Get calendar data from the latest snapshot in GCS."""
     
-    if not Config.DRIVE_FOLDER_ID:
-        return jsonify({
-            'error': 'Google Drive not configured',
-            'summary': {'live': 0, 'scheduled': 0, 'finished': 0},
-            'providers': {'live': 0, 'scheduled': 0, 'finished': 0},
-            'campaigns': []
-        })
-    
-    # Download latest snapshot from Drive
-    from backend.services.drive_client import DriveClient
-    drive_client = DriveClient()
-    
-    filename, content = drive_client.get_latest_snapshot()
+    # Get latest snapshot from GCS (saved during sync)
+    filename, content = storage.get_latest_snapshot()
     
     if not filename or not content:
         return jsonify({
-            'error': 'No snapshot data available in Google Drive',
+            'error': 'No snapshot data available. Run /api/sync to fetch from Google Drive.',
             'summary': {'live': 0, 'scheduled': 0, 'finished': 0},
             'providers': {'live': 0, 'scheduled': 0, 'finished': 0},
             'campaigns': []
@@ -365,7 +354,10 @@ def api_sync():
         # 8. Save entries to GCS
         storage.append_changelog_entries(entries)
         
-        # 9. Update master state in GCS
+        # 9. Save the current snapshot to GCS for calendar endpoint
+        storage.save_snapshot(current['drive_file']['name'], current['content'])
+        
+        # 10. Update master state in GCS
         state = storage.load_master_state()
         state['last_processed'] = datetime.now().isoformat()
         state['last_current_file'] = current['drive_file']['name']
