@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import {
     Table,
     TableBody,
@@ -14,6 +14,36 @@ import { cn } from "@/lib/utils"
 interface DataTableProps {
     data: CampaignEntry[]
     emptyMessage?: string
+}
+
+// Color palette for categorical field chips - deterministic based on value
+const chipColors = [
+    "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
+    "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300",
+    "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+    "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+    "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
+    "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300",
+    "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300",
+    "bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300",
+]
+
+// Hash function for consistent color assignment
+function hashString(str: string): number {
+    let hash = 0
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i)
+        hash = ((hash << 5) - hash) + char
+        hash = hash & hash
+    }
+    return Math.abs(hash)
+}
+
+function getChipColor(value: string, fieldType: 'objective' | 'bonus' | 'city' | 'manager'): string {
+    if (!value) return "bg-muted text-muted-foreground"
+    // Use field type + value for unique but consistent coloring
+    const hash = hashString(`${fieldType}:${value}`)
+    return chipColors[hash % chipColors.length]
 }
 
 function ExpandableCell({ children, className }: { children: React.ReactNode, className?: string }) {
@@ -49,13 +79,14 @@ function formatDate(dateStr: string) {
 function getBannerBadge(action: string | undefined) {
     if (!action) return <span className="text-muted-foreground/30">—</span>
 
-    let variant: "default" | "secondary" | "destructive" | "outline" = "outline"
+    let className = "whitespace-nowrap text-xs font-medium border-0 "
 
-    if (action.includes('start')) variant = "default"
-    else if (action.includes('end')) variant = "destructive"
-    else if (action.includes('update')) variant = "secondary"
+    if (action.includes('start')) className += "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300"
+    else if (action.includes('end')) className += "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
+    else if (action.includes('update')) className += "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300"
+    else className += "bg-muted text-muted-foreground"
 
-    return <Badge variant={variant} className="whitespace-nowrap">{action}</Badge>
+    return <Badge variant="outline" className={className}>{action}</Badge>
 }
 
 function formatDiff(changedFields: string[] | undefined, previousValues: Record<string, any> | undefined, row: CampaignEntry) {
@@ -71,9 +102,9 @@ function formatDiff(changedFields: string[] | undefined, previousValues: Record<
                     <div key={field} className="flex flex-col">
                         <span className="font-semibold text-muted-foreground text-[10px]">{field}:</span>
                         <div className="flex items-center gap-1">
-                            <span className="line-through text-red-500/70 text-[10px] truncate max-w-[60px]" title={String(prev)}>{String(prev ?? '-')}</span>
+                            <span className="line-through text-rose-600/70 dark:text-rose-400/70 text-[10px] truncate max-w-[60px]" title={String(prev)}>{String(prev ?? '-')}</span>
                             <span className="text-muted-foreground">→</span>
-                            <span className="text-green-600 font-medium text-[10px] truncate max-w-[60px]" title={String(curr)}>{String(curr ?? '-')}</span>
+                            <span className="text-emerald-600 dark:text-emerald-400 font-medium text-[10px] truncate max-w-[60px]" title={String(curr)}>{String(curr ?? '-')}</span>
                         </div>
                     </div>
                 )
@@ -122,7 +153,20 @@ export function DataTable({ data, emptyMessage = "No data available" }: DataTabl
                                 <TableCell><ExpandableCell className="font-medium">{row.provider_name}</ExpandableCell></TableCell>
                                 <TableCell><ExpandableCell>{row.account_manager}</ExpandableCell></TableCell>
                                 <TableCell><ExpandableCell>{row.city}</ExpandableCell></TableCell>
-                                null
+                                <TableCell>
+                                    {row.spend_objective ? (
+                                        <Badge variant="outline" className={cn("text-xs font-medium border-0", getChipColor(row.spend_objective, 'objective'))}>
+                                            {row.spend_objective}
+                                        </Badge>
+                                    ) : <span className="text-muted-foreground/30">—</span>}
+                                </TableCell>
+                                <TableCell>
+                                    {row.bonus_type ? (
+                                        <Badge variant="outline" className={cn("text-xs font-medium border-0", getChipColor(row.bonus_type, 'bonus'))}>
+                                            {row.bonus_type}
+                                        </Badge>
+                                    ) : <span className="text-muted-foreground/30">—</span>}
+                                </TableCell>
                                 <TableCell className="text-right font-mono">{row.bonus_percentage ? `${row.bonus_percentage}%` : '-'}</TableCell>
                                 <TableCell className="whitespace-nowrap text-xs text-muted-foreground">{formatDate(row.campaign_start)}</TableCell>
                                 <TableCell className="whitespace-nowrap text-xs text-muted-foreground">{formatDate(row.campaign_end)}</TableCell>

@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils"
 interface DetailGroupProps {
     title: string
     count: number
-    color: 'green' | 'cyan' | 'pink'
+    color: 'violet' | 'sky' | 'amber'
     children: React.ReactNode
     defaultOpen?: boolean
 }
@@ -20,9 +20,9 @@ export function DetailGroup({ title, count, color, children, defaultOpen = true 
     const [isOpen, setIsOpen] = React.useState(defaultOpen)
 
     const colorStyles = {
-        green: "bg-emerald-600 dark:bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.4)]",
-        cyan: "bg-cyan-600 dark:bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.4)]",
-        pink: "bg-rose-600 dark:bg-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.4)]"
+        violet: "bg-violet-600 dark:bg-violet-400 shadow-[0_0_8px_rgba(139,92,246,0.4)]",
+        sky: "bg-sky-600 dark:bg-sky-400 shadow-[0_0_8px_rgba(14,165,233,0.4)]",
+        amber: "bg-amber-600 dark:bg-amber-400 shadow-[0_0_8px_rgba(217,119,6,0.4)]"
     }
 
     return (

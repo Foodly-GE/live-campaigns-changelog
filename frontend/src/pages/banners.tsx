@@ -18,16 +18,16 @@ interface BannersResponse {
     current_date: string
 }
 
-function SimpleStat({ label, value, color }: { label: string, value: number, color: 'green' | 'cyan' | 'pink' }) {
+function SimpleStat({ label, value, color }: { label: string, value: number, color: 'violet' | 'sky' | 'amber' }) {
     const colorStyles = {
-        green: "text-emerald-600 dark:text-emerald-400",
-        cyan: "text-cyan-600 dark:text-cyan-400",
-        pink: "text-rose-600 dark:text-rose-400"
+        violet: "text-violet-600 dark:text-violet-400",
+        sky: "text-sky-600 dark:text-sky-400",
+        amber: "text-amber-600 dark:text-amber-400"
     }
     const bgStyles = {
-        green: "bg-emerald-500/10 border-emerald-500/20",
-        cyan: "bg-cyan-500/10 border-cyan-500/20",
-        pink: "bg-rose-500/10 border-rose-500/20",
+        violet: "bg-violet-500/10 border-violet-500/20",
+        sky: "bg-sky-500/10 border-sky-500/20",
+        amber: "bg-amber-500/10 border-amber-500/20",
     }
 
     return (
@@ -146,17 +146,17 @@ export default function BannersPage() {
                     <SimpleStat
                         label="Banner Start"
                         value={filteredStats.start}
-                        color="green"
+                        color="violet"
                     />
                     <SimpleStat
                         label="Banner Update"
                         value={filteredStats.update}
-                        color="cyan"
+                        color="sky"
                     />
                     <SimpleStat
                         label="Banner End"
                         value={filteredStats.end}
-                        color="pink"
+                        color="amber"
                     />
                 </div>
             </section>
@@ -164,15 +164,15 @@ export default function BannersPage() {
             <section className="space-y-4">
                 <h2 className="text-xl font-semibold tracking-tight">Details</h2>
 
-                <DetailGroup title="Banner Start" count={filteredGroups.start.length} color="green">
+                <DetailGroup title="Banner Start" count={filteredGroups.start.length} color="violet">
                     <DataTable data={filteredGroups.start} emptyMessage="No banner start actions" />
                 </DetailGroup>
 
-                <DetailGroup title="Banner Update" count={filteredGroups.update.length} color="cyan">
+                <DetailGroup title="Banner Update" count={filteredGroups.update.length} color="sky">
                     <DataTable data={filteredGroups.update} emptyMessage="No banner update actions" />
                 </DetailGroup>
 
-                <DetailGroup title="Banner End" count={filteredGroups.end.length} color="pink">
+                <DetailGroup title="Banner End" count={filteredGroups.end.length} color="amber">
                     <DataTable data={filteredGroups.end} emptyMessage="No banner end actions" />
                 </DetailGroup>
             </section>

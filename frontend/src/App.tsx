@@ -14,21 +14,21 @@ export default function App() {
       <BrowserRouter>
         <SidebarProvider>
           <AppSidebar />
-          <SidebarInset className="h-full overflow-hidden flex flex-col">
+          <SidebarInset>
             <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-background">
               <SidebarTrigger className="-ml-1" />
               <Separator orientation="vertical" className="mr-2 h-4" />
               <h1 className="font-semibold flex-1">Campaign Tracker</h1>
               <ThemeToggle />
             </header>
-            <main className="flex-1 overflow-y-auto p-4 pt-6">
+            <div className="flex-1 overflow-y-auto p-4 pt-6">
               <Routes>
                 <Route path="/" element={<Navigate to="/changelog" replace />} />
                 <Route path="/changelog" element={<ChangelogPage />} />
                 <Route path="/calendar" element={<CalendarPage />} />
                 <Route path="/banners" element={<BannersPage />} />
               </Routes>
-            </main>
+            </div>
           </SidebarInset>
         </SidebarProvider>
       </BrowserRouter>

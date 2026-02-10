@@ -114,7 +114,8 @@ def api_changelog():
         'time_series': time_series,
         'grouped': grouped,
         'dates': dates,
-        'detail_date': detail_date
+        'detail_date': detail_date,
+        'all_recent_entries': recent_entries  # Raw entries for client-side filtering
     })
 
 
@@ -136,44 +137,53 @@ def api_calendar():
     df = load_snapshot(latest_file)
     today = datetime.now()
     
-    # --- 1. Time Series Data (Past 7 + Next 14 days) ---
-    start_date = today - timedelta(days=7)
-    end_date = today + timedelta(days=14)
-    time_series = get_time_series_data(df, start_date, end_date)
-    
-    # --- 2. Current Status ---
-    # Classify campaigns based on TODAY
-    df = classify_campaigns(df, today)
-    
-    # Apply filters
+    # Apply filters from request
     provider = request.args.get('provider')
     city = request.args.get('city')
     discount_type = request.args.get('discount_type')
     status = request.args.get('status')
+    account_manager = request.args.get('account_manager')
+    spend_objective = request.args.get('spend_objective')
+    bonus_type = request.args.get('bonus_type')
     
-    filtered_df = filter_campaigns(
-        df,
-        provider_name=provider,
-        city=city,
-        discount_type=discount_type,
-        status=status
-    )
+    # Apply non-status filters first (for time series)
+    base_filtered_df = df.copy()
+    if provider:
+        base_filtered_df = base_filtered_df[
+            base_filtered_df['provider_name'].str.lower().str.contains(provider.lower(), na=False)
+        ]
+    if city:
+        base_filtered_df = base_filtered_df[base_filtered_df['city'].str.lower() == city.lower()]
+    if discount_type:
+        base_filtered_df = base_filtered_df[base_filtered_df['discount_type'] == discount_type]
+    if account_manager:
+        base_filtered_df = base_filtered_df[base_filtered_df['account_manager'] == account_manager]
+    if spend_objective:
+        base_filtered_df = base_filtered_df[base_filtered_df['spend_objective'] == spend_objective]
+    if bonus_type:
+        base_filtered_df = base_filtered_df[base_filtered_df['bonus_type'] == bonus_type]
+    
+    # --- 1. Time Series Data (Past 7 + Next 14 days) - AFTER filtering ---
+    start_date = today - timedelta(days=7)
+    end_date = today + timedelta(days=14)
+    time_series = get_time_series_data(base_filtered_df, start_date, end_date)
+    
+    # --- 2. Current Status ---
+    # Classify campaigns based on TODAY
+    classified_df = classify_campaigns(base_filtered_df, today)
+    
+    # Apply status filter if provided
+    filtered_df = classified_df
+    if status:
+        filtered_df = filtered_df[filtered_df['status'] == status]
     
     # Get current summary
-    current_summary = get_calendar_summary(filtered_df)
-    providers = get_unique_providers_by_status(filtered_df)
+    current_summary = get_calendar_summary(classified_df)  # Summary from all statuses
+    providers = get_unique_providers_by_status(classified_df)
     
     # Get previous day summary for delta
-    yesterday_df = classify_campaigns(df, today - timedelta(days=1))
-    # Apply same filters to yesterday's view
-    yesterday_filtered = filter_campaigns(
-        yesterday_df,
-        provider_name=provider,
-        city=city,
-        discount_type=discount_type,
-        status=status
-    )
-    prev_summary = get_calendar_summary(yesterday_filtered)
+    yesterday_df = classify_campaigns(base_filtered_df, today - timedelta(days=1))
+    prev_summary = get_calendar_summary(yesterday_df)
     
     # Convert to records
     campaigns = filtered_df.to_dict('records')

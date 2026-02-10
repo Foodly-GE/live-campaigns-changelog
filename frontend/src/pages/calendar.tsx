@@ -30,8 +30,18 @@ export default function CalendarPage() {
         city: "",
     })
 
-    // API call depends on city
-    const url = `/api/calendar${filters.city ? `?city=${encodeURIComponent(filters.city)}` : ''}`
+    // Build URL with all filters for backend
+    const url = useMemo(() => {
+        const params = new URLSearchParams()
+        if (filters.city) params.set('city', filters.city)
+        if (filters.accountManager) params.set('account_manager', filters.accountManager)
+        if (filters.spendObjective) params.set('spend_objective', filters.spendObjective)
+        if (filters.bonusType) params.set('bonus_type', filters.bonusType)
+        if (filters.providers.length > 0) params.set('provider', filters.providers[0]) // Backend supports one provider filter
+        const queryString = params.toString()
+        return `/api/calendar${queryString ? `?${queryString}` : ''}`
+    }, [filters])
+    
     const { data, loading, error } = useApi<CalendarResponse>(url)
 
     // Derived options
@@ -133,19 +143,19 @@ export default function CalendarPage() {
                         label="Live"
                         value={filteredStats.live}
                         previous={data?.prev_summary?.live || 0}
-                        color="green"
+                        color="violet"
                     />
                     <StatCard
                         label="Finished"
                         value={filteredStats.finished}
                         previous={data?.prev_summary?.finished || 0}
-                        color="pink"
+                        color="amber"
                     />
                     <StatCard
                         label="Scheduled"
                         value={filteredStats.scheduled}
                         previous={data?.prev_summary?.scheduled || 0}
-                        color="cyan"
+                        color="sky"
                     />
                 </div>
 
@@ -153,9 +163,9 @@ export default function CalendarPage() {
                     <CustomLineChart
                         data={chartData}
                         traces={[
-                            { key: 'live', color: 'hsl(160 84% 39%)', label: 'Live' },
-                            { key: 'finished', color: 'hsl(347 77% 50%)', label: 'Finished' },
-                            { key: 'scheduled', color: 'hsl(189 94% 43%)', label: 'Scheduled' }
+                            { key: 'live', color: 'hsl(263 70% 50%)', label: 'Live' },
+                            { key: 'finished', color: 'hsl(38 92% 50%)', label: 'Finished' },
+                            { key: 'scheduled', color: 'hsl(199 89% 48%)', label: 'Scheduled' }
                         ]}
                         height={320}
                     />
@@ -165,15 +175,15 @@ export default function CalendarPage() {
             <section className="space-y-4">
                 <h2 className="text-xl font-semibold tracking-tight">Details</h2>
 
-                <DetailGroup title="Live" count={filteredGroups.live.length} color="green">
+                <DetailGroup title="Live" count={filteredGroups.live.length} color="violet">
                     <DataTable data={filteredGroups.live} emptyMessage="No live campaigns" />
                 </DetailGroup>
 
-                <DetailGroup title="Finished" count={filteredGroups.finished.length} color="pink">
+                <DetailGroup title="Finished" count={filteredGroups.finished.length} color="amber">
                     <DataTable data={filteredGroups.finished} emptyMessage="No finished campaigns" />
                 </DetailGroup>
 
-                <DetailGroup title="Scheduled" count={filteredGroups.scheduled.length} color="cyan">
+                <DetailGroup title="Scheduled" count={filteredGroups.scheduled.length} color="sky">
                     <DataTable data={filteredGroups.scheduled} emptyMessage="No scheduled campaigns" />
                 </DetailGroup>
             </section>

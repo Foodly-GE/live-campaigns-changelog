@@ -22,6 +22,7 @@ interface ChangelogResponse {
     }
     dates: string[]
     detail_date: string
+    all_recent_entries: CampaignEntry[]  // Raw entries for client-side filtering
 }
 
 export default function ChangelogPage() {
@@ -59,16 +60,42 @@ export default function ChangelogPage() {
         }
     }, [data])
 
-    // Chart data - apply filters
+    // Chart data - apply filters to raw entries and aggregate by date
     const chartData = useMemo(() => {
-        if (!data?.time_series) return []
-        return Object.keys(data.time_series).sort().map(date => ({
+        if (!data?.all_recent_entries) return []
+        
+        const filterFn = (e: CampaignEntry) => {
+            if (filters.accountManager && e.account_manager !== filters.accountManager) return false
+            if (filters.spendObjective && e.spend_objective !== filters.spendObjective) return false
+            if (filters.bonusType && e.bonus_type !== filters.bonusType) return false
+            if (filters.city && e.city !== filters.city) return false
+            if (filters.providers.length > 0 && !filters.providers.includes(e.provider_name)) return false
+            return true
+        }
+        
+        const filteredEntries = data.all_recent_entries.filter(filterFn)
+        
+        // Aggregate by date
+        const byDate: Record<string, { start: number; update: number; end: number }> = {}
+        
+        for (const entry of filteredEntries) {
+            const date = entry.date || ''
+            if (!byDate[date]) {
+                byDate[date] = { start: 0, update: 0, end: 0 }
+            }
+            const eventType = entry.event_type
+            if (eventType === 'campaign-start') byDate[date].start++
+            else if (eventType === 'campaign-update') byDate[date].update++
+            else if (eventType === 'campaign-end') byDate[date].end++
+        }
+        
+        return Object.keys(byDate).sort().map(date => ({
             date,
-            start: data.time_series[date]['campaign-start'] || 0,
-            update: data.time_series[date]['campaign-update'] || 0,
-            end: data.time_series[date]['campaign-end'] || 0
+            start: byDate[date].start,
+            update: byDate[date].update,
+            end: byDate[date].end
         }))
-    }, [data?.time_series])
+    }, [data?.all_recent_entries, filters])
 
     // Filtered stats for summary cards
     const filteredStats = useMemo(() => {
@@ -149,19 +176,19 @@ export default function ChangelogPage() {
                         label="Campaign Start"
                         value={filteredStats.start}
                         previous={data?.summary?.prev_stats?.['campaign-start'] || 0}
-                        color="green"
+                        color="violet"
                     />
                     <StatCard
                         label="Campaign Update"
                         value={filteredStats.update}
                         previous={data?.summary?.prev_stats?.['campaign-update'] || 0}
-                        color="cyan"
+                        color="sky"
                     />
                     <StatCard
                         label="Campaign End"
                         value={filteredStats.end}
                         previous={data?.summary?.prev_stats?.['campaign-end'] || 0}
-                        color="pink"
+                        color="amber"
                     />
                 </div>
 
@@ -169,9 +196,9 @@ export default function ChangelogPage() {
                     <CustomLineChart
                         data={chartData}
                         traces={[
-                            { key: 'start', color: 'hsl(160 84% 39%)', label: 'Start' },
-                            { key: 'update', color: 'hsl(189 94% 43%)', label: 'Update' },
-                            { key: 'end', color: 'hsl(347 77% 50%)', label: 'End' }
+                            { key: 'start', color: 'hsl(263 70% 50%)', label: 'Start' },
+                            { key: 'update', color: 'hsl(199 89% 48%)', label: 'Update' },
+                            { key: 'end', color: 'hsl(38 92% 50%)', label: 'End' }
                         ]}
                         height={320}
                     />
@@ -199,15 +226,15 @@ export default function ChangelogPage() {
                     </div>
                 </div>
 
-                <DetailGroup title="Campaign Start" count={filteredGroups.start.length} color="green">
+                <DetailGroup title="Campaign Start" count={filteredGroups.start.length} color="violet">
                     <DataTable data={filteredGroups.start} emptyMessage="No campaigns started" />
                 </DetailGroup>
 
-                <DetailGroup title="Campaign Update" count={filteredGroups.update.length} color="cyan">
+                <DetailGroup title="Campaign Update" count={filteredGroups.update.length} color="sky">
                     <DataTable data={filteredGroups.update} emptyMessage="No campaigns updated" />
                 </DetailGroup>
 
-                <DetailGroup title="Campaign End" count={filteredGroups.end.length} color="pink">
+                <DetailGroup title="Campaign End" count={filteredGroups.end.length} color="amber">
                     <DataTable data={filteredGroups.end} emptyMessage="No campaigns ended" />
                 </DetailGroup>
             </section>
