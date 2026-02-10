@@ -63,7 +63,7 @@ class GCSStorage:
     def list_snapshots(self) -> List[str]:
         """List snapshot filenames in GCS."""
         blobs = self.bucket.list_blobs(prefix='snapshots/')
-        return [blob.name.replace('snapshots/', '') for blob in blobs if blob.name.endswith('.csv')]
+        return [blob.name.replace('snapshots/', '') for blob in blobs if not blob.name.endswith('/')]
 
     def get_snapshot_content(self, filename: str) -> bytes:
         """Get content of a snapshot file from GCS."""
@@ -72,22 +72,31 @@ class GCSStorage:
             return None
         return blob.download_as_bytes()
     
-    def get_latest_snapshot(self) -> tuple[Optional[str], Optional[bytes]]:
+    def get_latest_snapshot(self) -> tuple:
         """Get the most recently saved snapshot from GCS."""
-        blobs = list(self.bucket.list_blobs(prefix='snapshots/'))
-        csv_blobs = [b for b in blobs if b.name.endswith('.csv')]
-        
-        if not csv_blobs:
+        try:
+            blobs = list(self.bucket.list_blobs(prefix='snapshots/'))
+            # Filter out the directory itself, keep all files
+            csv_blobs = [b for b in blobs if not b.name.endswith('/')]
+            
+            if not csv_blobs:
+                return None, None
+            
+            # Sort by updated time, most recent first
+            csv_blobs.sort(key=lambda b: b.updated, reverse=True)
+            latest = csv_blobs[0]
+            
+            filename = latest.name.replace('snapshots/', '')
+            content = latest.download_as_bytes()
+            
+            return filename, content
+        except Exception as e:
+            import sys
+            print(f"ERROR in get_latest_snapshot: {e}", file=sys.stderr)
+            import traceback
+            traceback.print_exc(file=sys.stderr)
+            sys.stderr.flush()
             return None, None
-        
-        # Sort by updated time, most recent first
-        csv_blobs.sort(key=lambda b: b.updated, reverse=True)
-        latest = csv_blobs[0]
-        
-        filename = latest.name.replace('snapshots/', '')
-        content = latest.download_as_bytes()
-        
-        return filename, content
     
     def cleanup_old_snapshots(self, keep_count: int = 10) -> int:
         """

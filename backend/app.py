@@ -129,14 +129,24 @@ def api_changelog():
 def api_calendar():
     """Get calendar data from the latest snapshot in GCS."""
     
+    import sys
+    print("=" * 50, file=sys.stderr)
+    print("CALENDAR ENDPOINT CALLED", file=sys.stderr)
+    print("=" * 50, file=sys.stderr)
+    sys.stderr.flush()
+    
     # Get latest snapshot from GCS (saved during sync)
     try:
+        print(f"Attempting to get latest snapshot from GCS...", file=sys.stderr)
+        sys.stderr.flush()
         filename, content = storage.get_latest_snapshot()
-        print(f"Calendar endpoint: Retrieved snapshot - filename={filename}, content_size={len(content) if content else 0}")
+        print(f"Calendar endpoint: Retrieved snapshot - filename={filename}, content_size={len(content) if content else 0}", file=sys.stderr)
+        sys.stderr.flush()
     except Exception as e:
-        print(f"Calendar endpoint: Error retrieving snapshot - {e}")
+        print(f"Calendar endpoint: Error retrieving snapshot - {e}", file=sys.stderr)
         import traceback
-        traceback.print_exc()
+        traceback.print_exc(file=sys.stderr)
+        sys.stderr.flush()
         return jsonify({
             'error': f'Error retrieving snapshot: {str(e)}',
             'summary': {'live': 0, 'scheduled': 0, 'finished': 0},
@@ -145,6 +155,8 @@ def api_calendar():
         })
     
     if not filename or not content:
+        print(f"No snapshot found: filename={filename}, content={'exists' if content else 'None'}", file=sys.stderr)
+        sys.stderr.flush()
         return jsonify({
             'error': 'No snapshot data available. Run /api/sync to fetch from Google Drive.',
             'summary': {'live': 0, 'scheduled': 0, 'finished': 0},
