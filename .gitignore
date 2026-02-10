@@ -25,6 +25,7 @@ dist/
 .agent/
 .server.log
 .server.pid
+frontend_legacy/
 
 # Service account keys
 *-service-account*.json
