@@ -10,7 +10,6 @@ venv/
 
 # Node
 node_modules/
-dist/
 .npm
 
 # OS
@@ -29,7 +28,13 @@ dist/
 # Service account keys
 *-service-account*.json
 *-credentials*.json
+
+# Exclude CSV files but keep data directory structure
 *.csv
 
 # Simulation data (local testing only)
 sim-smart-promos-changelog/
+
+# Git
+.git/
+.gitignore

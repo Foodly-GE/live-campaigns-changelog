@@ -18,7 +18,7 @@ from backend.services.calendar import (
     aggregate_banners_by_date,
     get_time_series_data
 )
-from backend.utils.csv_parser import load_snapshot, load_snapshot_from_bytes, get_latest_snapshot
+from backend.utils.csv_parser import load_snapshot_from_bytes
 from backend.utils.storage import get_storage
 from backend.config import Config
 
@@ -30,12 +30,11 @@ PROJECT_ROOT = Path(__file__).parent.parent
 app = Flask(
     __name__,
     static_folder=str(PROJECT_ROOT / 'frontend' / 'dist'),
-    static_url_path=''
+    static_url_path='/static'  # Change static URL path to avoid conflicts
 )
 CORS(app) # Allow dev server to access API
 
 # Configuration
-DATA_DIR = Path(Config.DATA_DIR)
 storage = get_storage()
 
 # ============== Pages ==============
@@ -43,10 +42,16 @@ storage = get_storage()
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve(path):
+    # Don't serve static files for API routes
+    if path.startswith('api/'):
+        return jsonify({'error': 'Not found'}), 404
+    
+    # Serve static files if they exist
     if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
         return send_from_directory(app.static_folder, path)
-    else:
-        return send_from_directory(app.static_folder, 'index.html')
+    
+    # Otherwise serve index.html for client-side routing
+    return send_from_directory(app.static_folder, 'index.html')
 
 
 # ============== API Endpoints ==============
@@ -122,44 +127,31 @@ def api_changelog():
 
 @app.route('/api/calendar')
 def api_calendar():
-    """Get calendar data."""
-    # Load latest snapshot
-    # Support both local and GCS
-    df = None
+    """Get calendar data from the latest snapshot in Google Drive."""
     
-    if Config.STORAGE_BACKEND == 'gcs':
-        # GCS mode
-        snapshots = storage.list_snapshots()
-        if not snapshots:
-             return jsonify({
-                'error': 'No snapshot data available',
-                'summary': {'live': 0, 'scheduled': 0, 'finished': 0},
-                'providers': {'live': 0, 'scheduled': 0, 'finished': 0},
-                'campaigns': []
-            })
-        
-        snapshots.sort(reverse=True) # Assumes YYYY-MM-DD or similar sortable names
-        latest_file = snapshots[0]
-        content = storage.get_snapshot_content(latest_file)
-        df = load_snapshot_from_bytes(content)
-        
-    else:
-        # Local mode    
-        snapshots_dir = DATA_DIR / 'snapshots'
-        # ensure dir exists
-        snapshots_dir.mkdir(parents=True, exist_ok=True)
-        
-        latest_file = get_latest_snapshot(snapshots_dir)
-        
-        if not latest_file:
-            return jsonify({
-                'error': 'No snapshot data available',
-                'summary': {'live': 0, 'scheduled': 0, 'finished': 0},
-                'providers': {'live': 0, 'scheduled': 0, 'finished': 0},
-                'campaigns': []
-            })
-        
-        df = load_snapshot(latest_file)
+    if not Config.DRIVE_FOLDER_ID:
+        return jsonify({
+            'error': 'Google Drive not configured',
+            'summary': {'live': 0, 'scheduled': 0, 'finished': 0},
+            'providers': {'live': 0, 'scheduled': 0, 'finished': 0},
+            'campaigns': []
+        })
+    
+    # Download latest snapshot from Drive
+    from backend.services.drive_client import DriveClient
+    drive_client = DriveClient()
+    
+    filename, content = drive_client.get_latest_snapshot()
+    
+    if not filename or not content:
+        return jsonify({
+            'error': 'No snapshot data available in Google Drive',
+            'summary': {'live': 0, 'scheduled': 0, 'finished': 0},
+            'providers': {'live': 0, 'scheduled': 0, 'finished': 0},
+            'campaigns': []
+        })
+    
+    df = load_snapshot_from_bytes(content)
 
     today = datetime.now()
     
@@ -279,66 +271,118 @@ def api_banners():
     })
 
 
+@app.route('/api/admin/state')
+def api_admin_state():
+    """Get current system state for admin page."""
+    state = storage.load_master_state()
+    return jsonify(state)
+
+
 @app.route('/api/sync', methods=['POST'])
+@app.route('/api/admin/data-pull/trigger', methods=['POST'])  # Cloud Scheduler endpoint
 def api_sync():
     """
     Sync snapshots from Google Drive and process changes.
     Can be triggered by Cloud Scheduler.
+    
+    Process:
+    1. Download all snapshots from Google Drive
+    2. Sort by modification time (newest first)
+    3. Compare the 2 most recent
+    4. Append changelog entries to GCS
+    5. Update master state in GCS
+    
+    Note: Raw snapshots are NOT stored in GCS, only processed results.
     """
     try:
-        # 1. Download latest from Drive (if configured)
-        drive_file_name = None
-        drive_content = None
+        if not Config.DRIVE_FOLDER_ID:
+            return jsonify({'error': 'DRIVE_FOLDER_ID not configured'}), 400
         
-        if Config.DRIVE_FOLDER_ID:
-            from backend.services.drive_client import DriveClient
-            drive_client = DriveClient()
-            drive_file_name, drive_content = drive_client.get_latest_snapshot()
+        # 1. Download all snapshots from Drive
+        from backend.services.drive_client import DriveClient
+        drive_client = DriveClient()
+        
+        files = drive_client.list_files()
+        
+        if len(files) < 2:
+            return jsonify({'error': f'Need at least 2 files in Drive to compare. Found: {len(files)}'}), 400
+        
+        # 2. Download all files and extract their ingestion timestamps
+        print(f"Downloading {len(files)} files from Drive to determine recency...")
+        file_data = []
+        for f in files:
+            content = drive_client.download_file(f['id'])
+            df = load_snapshot_from_bytes(content)
             
-            if drive_file_name and drive_content:
-                # Save to storage (GCS or local)
-                storage.save_snapshot(drive_file_name, drive_content)
-                print(f"Downloaded and saved: {drive_file_name}")
-        
-        # 2. Get 2 most recent snapshots from storage to compare
-        snapshots = storage.list_snapshots()
-        snapshots.sort(reverse=True)
-        
-        if len(snapshots) < 1:
-            return jsonify({'error': 'No snapshots found available for processing'}), 400
+            # Get max Last Ingested Ts Time from the file (column name not normalized)
+            max_ingested = pd.to_datetime(df['Last Ingested Ts Time']).max()
             
-        current_name = snapshots[0]
-        # Only compare if we have a previous one
-        previous_name = snapshots[1] if len(snapshots) > 1 else None
+            file_data.append({
+                'drive_file': f,
+                'content': content,
+                'df': df,
+                'max_ingested': max_ingested
+            })
+            print(f"  {f['name']}: max ingested = {max_ingested}")
         
-        # Load dataframes
-        current_bytes = storage.get_snapshot_content(current_name)
-        current_df = load_snapshot_from_bytes(current_bytes)
+        # 3. Sort by max_ingested (newest first)
+        file_data.sort(key=lambda x: x['max_ingested'], reverse=True)
         
-        previous_df = None
-        if previous_name:
-            prev_bytes = storage.get_snapshot_content(previous_name)
-            previous_df = load_snapshot_from_bytes(prev_bytes)
-            
-        # 3. Compare and generate changelog
-        process_date = datetime.now()
-        entries = compare_snapshots(previous_df, current_df, process_date)
+        if len(file_data) < 2:
+            return jsonify({'error': f'Need at least 2 files in Drive to compare. Found: {len(file_data)}'}), 400
         
-        # 4. Save entries
+        # 4. Get the 2 most recent based on ingestion time
+        current = file_data[0]
+        previous = file_data[1]
+        
+        print(f"\nComparing files (by ingestion time):")
+        print(f"  Current:  {current['drive_file']['name']} (ingested: {current['max_ingested']})")
+        print(f"  Previous: {previous['drive_file']['name']} (ingested: {previous['max_ingested']})")
+        
+        # 5. Use the current file's max ingestion time as the process date
+        process_date = current['max_ingested'].to_pydatetime()
+        date_str = process_date.strftime('%Y-%m-%d')
+        
+        # 6. Check if we already have entries for this date
+        existing_dates = storage.get_changelog_dates()
+        if date_str in existing_dates:
+            return jsonify({
+                'success': True,
+                'skipped': True,
+                'message': f'Changelog entries for {date_str} already exist',
+                'files_in_drive': len(files),
+                'current_file': current['drive_file']['name'],
+                'current_ingested': str(current['max_ingested']),
+                'previous_file': previous['drive_file']['name'],
+                'previous_ingested': str(previous['max_ingested']),
+                'entries_created': 0,
+                'date': date_str
+            })
+        
+        # 7. Compare and generate changelog
+        entries = compare_snapshots(previous['df'], current['df'], process_date)
+        
+        # 8. Save entries to GCS
         storage.append_changelog_entries(entries)
         
-        # 5. Update master state
+        # 9. Update master state in GCS
         state = storage.load_master_state()
-        state['last_processed'] = process_date.isoformat()
+        state['last_processed'] = datetime.now().isoformat()
+        state['last_current_file'] = current['drive_file']['name']
+        state['last_current_ingested'] = str(current['max_ingested'])
+        state['last_previous_file'] = previous['drive_file']['name']
+        state['last_previous_ingested'] = str(previous['max_ingested'])
         storage.save_master_state(state)
         
         return jsonify({
             'success': True,
-            'downloaded_file': drive_file_name,
-            'processed_file': current_name,
-            'compared_against': previous_name,
+            'files_in_drive': len(files),
+            'current_file': current['drive_file']['name'],
+            'current_ingested': str(current['max_ingested']),
+            'previous_file': previous['drive_file']['name'],
+            'previous_ingested': str(previous['max_ingested']),
             'entries_created': len(entries),
-            'date': process_date.strftime('%Y-%m-%d')
+            'date': date_str
         })
         
     except Exception as e:

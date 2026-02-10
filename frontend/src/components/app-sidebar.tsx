@@ -1,4 +1,4 @@
-import { Calendar, List, Image } from "lucide-react"
+import { Calendar, List, Image, Settings } from "lucide-react"
 import { useLocation, Link } from "react-router-dom"
 
 import {
@@ -30,6 +30,11 @@ const items = [
         url: "/banners",
         icon: Image,
     },
+    {
+        title: "Admin",
+        url: "/admin",
+        icon: Settings,
+    },
 ]
 
 export function AppSidebar() {
@@ -39,7 +44,7 @@ export function AppSidebar() {
         <Sidebar>
             <SidebarHeader>
                 <div className="px-4 py-2">
-                    <h2 className="text-xl font-bold tracking-tight">Campaigns</h2>
+                    <h2 className="text-xl font-bold tracking-tight">Smart Promos Tracker</h2>
                 </div>
             </SidebarHeader>
             <SidebarContent>

@@ -12,7 +12,6 @@ class Config:
     STORAGE_BACKEND = os.getenv('STORAGE_BACKEND', 'local')  # 'local' or 'gcs'
     GCS_PROJECT = os.getenv('GCS_PROJECT', 'industrial-gist-470307-k4')
     GCS_BUCKET = os.getenv('GCS_BUCKET', 'campaign-changelog-data')
-    DATA_DIR = os.getenv('DATA_DIR', 'data')
     
     # Google Drive
     DRIVE_FOLDER_ID = os.getenv('DRIVE_FOLDER_ID')

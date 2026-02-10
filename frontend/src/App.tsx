@@ -7,6 +7,7 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import ChangelogPage from "@/pages/changelog"
 import CalendarPage from "@/pages/calendar"
 import BannersPage from "@/pages/banners"
+import AdminPage from "@/pages/admin"
 
 export default function App() {
   return (
@@ -18,7 +19,7 @@ export default function App() {
             <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-background">
               <SidebarTrigger className="-ml-1" />
               <Separator orientation="vertical" className="mr-2 h-4" />
-              <h1 className="font-semibold flex-1">Campaign Tracker</h1>
+              <h1 className="font-semibold flex-1">Smart Promos Tracker</h1>
               <ThemeToggle />
             </header>
             <div className="flex-1 overflow-y-auto p-4 pt-6">
@@ -27,6 +28,7 @@ export default function App() {
                 <Route path="/changelog" element={<ChangelogPage />} />
                 <Route path="/calendar" element={<CalendarPage />} />
                 <Route path="/banners" element={<BannersPage />} />
+                <Route path="/admin" element={<AdminPage />} />
               </Routes>
             </div>
           </SidebarInset>

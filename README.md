@@ -59,12 +59,10 @@ See [.docs/local-development.md](.docs/local-development.md) for detailed setup 
 │   │   ├── pages/       # Page components (changelog, calendar, banners)
 │   │   └── hooks/       # Custom React hooks
 │   └── dist/            # Built static files (production)
-├── data/                # Data storage
-│   ├── snapshots/       # CSV snapshot files
-│   ├── history/         # Changelog history
-│   └── state/           # Application state
 └── .docs/               # Documentation
 ```
+
+**Data Storage:** All data (snapshots, changelog, state) is stored in GCS bucket `gs://campaign-changelog-data/`
 
 ## Tech Stack
 

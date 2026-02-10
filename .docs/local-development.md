@@ -64,11 +64,13 @@ Access the application at `http://localhost:8080`
 ## Environment Variables
 
 - `PORT` - Server port (default: 8080)
-- `DATA_DIR` - Path to data directory (default: `./data`)
+- `STORAGE_BACKEND` - Must be set to `gcs`
+- `GCS_BUCKET` - GCS bucket name (default: campaign-changelog-data)
+- `GCS_PROJECT` - GCP project ID
 
 Example:
 ```bash
-PORT=3000 DATA_DIR=/path/to/data python backend/app.py
+PORT=3000 STORAGE_BACKEND=gcs python backend/app.py
 ```
 
 ## Development Workflow
@@ -114,7 +116,9 @@ Make sure CORS is enabled in `backend/app.py` (it is by default for development)
 
 ### Data Not Loading
 
-Ensure the `data/` directory exists with:
-- `data/snapshots/` - CSV snapshot files
-- `data/history/changelog_log.json` - Changelog entries
-- `data/state/master_state.json` - Application state
+All data is stored in GCS bucket `gs://campaign-changelog-data/`:
+- `snapshots/` - CSV snapshot files from Google Drive
+- `history/changelog_log.json` - Changelog entries
+- `state/master_state.json` - Application state
+
+Ensure `STORAGE_BACKEND=gcs` is set in your environment.

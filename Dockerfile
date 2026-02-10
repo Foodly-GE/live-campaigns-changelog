@@ -18,16 +18,14 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy backend and data
+# Copy backend
 COPY backend/ backend/
-COPY data/ data/
 
 # Copy built frontend assets from Stage 1
 COPY --from=frontend-build /app/frontend/dist /app/frontend/dist
 
 # Set environment variables
 ENV PORT=8080
-ENV DATA_DIR=/app/data
 ENV PYTHONPATH=/app
 ENV ENVIRONMENT=production
 ENV STORAGE_BACKEND=gcs

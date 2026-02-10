@@ -101,4 +101,5 @@ def get_storage(config=None):
         from backend.utils.gcs_storage import GCSStorage
         return GCSStorage(Config.GCS_BUCKET, Config.GCS_PROJECT)
     
-    return Storage(Path(Config.DATA_DIR))
+    raise ValueError("Only GCS storage backend is supported. Set STORAGE_BACKEND=gcs")
+

@@ -40,6 +40,9 @@ def load_snapshot(file_path: Path) -> pd.DataFrame:
     """
     df = pd.read_csv(file_path)
     
+    # Strip whitespace from column names
+    df.columns = df.columns.str.strip()
+    
     # Rename columns to internal names
     df = df.rename(columns=COLUMN_MAPPING)
     
@@ -64,6 +67,9 @@ def load_snapshot_from_bytes(data: bytes) -> pd.DataFrame:
     """
     import io
     df = pd.read_csv(io.BytesIO(data))
+    
+    # Strip whitespace from column names
+    df.columns = df.columns.str.strip()
     
     # Rename columns to internal names
     df = df.rename(columns=COLUMN_MAPPING)

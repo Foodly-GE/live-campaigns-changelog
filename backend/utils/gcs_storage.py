@@ -55,17 +55,3 @@ class GCSStorage:
         dates = sorted(set(e.get('date') for e in all_entries if e.get('date')))
         return dates
 
-    def save_snapshot(self, filename: str, content: bytes) -> None:
-        """Save a snapshot CSV file to GCS."""
-        blob = self.bucket.blob(f'snapshots/{filename}')
-        blob.upload_from_string(content, content_type='text/csv')
-        
-    def list_snapshots(self) -> List[str]:
-        """List snapshot filenames in GCS."""
-        blobs = self.client.list_blobs(self.bucket, prefix='snapshots/')
-        return [blob.name.split('/')[-1] for blob in blobs if blob.name.endswith('.csv')]
-        
-    def get_snapshot_content(self, filename: str) -> bytes:
-        """Get content of a snapshot file."""
-        blob = self.bucket.blob(f'snapshots/{filename}')
-        return blob.download_as_bytes()

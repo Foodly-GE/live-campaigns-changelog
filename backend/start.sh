@@ -6,5 +6,4 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR/.."
 
 echo "Starting Backend from $(pwd)..."
-export DATA_DIR="$(pwd)/data"
 python3 -m backend.app
